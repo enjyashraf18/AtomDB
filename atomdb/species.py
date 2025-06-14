@@ -32,6 +32,25 @@ from scipy.interpolate import CubicSpline
 
 from atomdb.periodic import Element, element_symbol
 from atomdb.utils import DEFAULT_DATAPATH, DEFAULT_DATASET, DEFAULT_REMOTE
+from importlib_resources import \
+files
+import tables as pt
+from numbers import Integral
+
+elements_hdf5_file = files("atomdb.data").joinpath("elements_data.h5")
+ELEMENTS_H5FILE = pt.open_file(elements_hdf5_file, mode="r")
+
+PROPERTY_NAME_MAP = [
+    "atmass",
+    "cov_radius",
+    "vdw_radius",
+    "at_radius",
+    "polarizability",
+    "dispersion_c6",
+    "elem",
+    "atnum",
+    "name"
+]
 
 __all__ = [
     "Species",
@@ -62,36 +81,89 @@ def default_matrix():
     return np.zeros(0).reshape(1, 0)
 
 
+# def scalar(method):
+#     r"""Expose a SpeciesData field."""
+#     name = method.__name__
+#
+#     @property
+#     def wrapper(self):
+#         print("hi")
+#
+#         # Map the name of the method in the SpeciesData class to the name in the Elements class
+#         # This dict can be removed if the Elements csv file uses the same names as the SpeciesData class.
+#         namemap = {
+#             "cov_radius": "cov_radius",
+#             "vdw_radius": "vdw_radius",
+#             "at_radius": "at_radius",
+#             "polarizability": "pold",
+#             "dispersion_c6": "c6",
+#             "atmass": "mass",
+#         }
+#
+#         if name == "atmass":
+#             print(f"inside atmass {getattr(Element(self._data.elem), namemap[name])}")
+#             return getattr(Element(self._data.elem), namemap[name])
+#         if name in namemap:
+#             # Only return Element property if neutral, otherwise None
+#             charge = self._data.atnum - self._data.nelec
+#             print(f"charge {charge}")
+#             print(f"inside the other {getattr(Element(self._data.elem), namemap[name])}")
+#             return getattr(Element(self._data.elem), namemap[name]) if charge == 0 else None
+#
+#         return getattr(self._data, name)
+#
+#     # conserve the docstring of the method
+#     wrapper.__doc__ = method.__doc__
+#     return wrapper
+
+
 def scalar(method):
     r"""Expose a SpeciesData field."""
     name = method.__name__
 
     @property
     def wrapper(self):
+        # Checking if the property is not in PROPERTY_NAME_MAP, if not then fetch it from SpeciesData
+        if name not in PROPERTY_NAME_MAP:
+            return getattr(self._data, name)
 
-        # Map the name of the method in the SpeciesData class to the name in the Elements class
-        # This dict can be removed if the Elements csv file uses the same names as the SpeciesData class.
-        namemap = {
-            "cov_radius": "cov_radius",
-            "vdw_radius": "vdw_radius",
-            "at_radius": "at_radius",
-            "polarizability": "pold",
-            "dispersion_c6": "c6",
-            "atmass": "mass",
-        }
+        # calculate charge then if charge is not zero (ions) --> return none
+        charge = self._data.atnum - self._data.nelec
+        if charge != 0 and name not in ["atmass", "elem", "atnum", "name"]:
+            return None
 
-        if name == "atmass":
-            return getattr(Element(self._data.elem), namemap[name])
-        if name in namemap:
-            # Only return Element property if neutral, otherwise None
-            charge = self._data.atnum - self._data.nelec
-            return getattr(Element(self._data.elem), namemap[name]) if charge == 0 else None
+        # get the element group
+        element_group = f"/Elements/{self._data.atnum:03d}"
 
-        return getattr(self._data, name)
+        table_name = name #PROPERTY_NAME_MAP[name]
+        table_path = f"{element_group}/{table_name}"
 
-    # conserve the docstring of the method
+        # get the table node from the HDF5 file
+        table = ELEMENTS_H5FILE.get_node(table_path)
+
+        # Handle basic properties (single column --> no sources)
+        if len(table.colnames) == 1 and table.colnames[0] == "value":
+            value = table[0]["value"]
+            # if the value is an int, return it as an int
+            if isinstance(value, Integral):
+                return int(value)
+            # if the value is a string, decode from bytes
+            elif isinstance(value, bytes):
+                return value.decode("utf-8")
+        else:
+            # handle properties with multiple sources
+            result = {}
+            for row in table:
+                source = row["source"].decode("utf-8")
+                value = row["value"]
+                # exclude none values
+                if not np.isnan(value):
+                    result[source] = float(value)
+            return result if result else None
+
     wrapper.__doc__ = method.__doc__
     return wrapper
+
 
 
 def _remove_suffix(input_string, suffix):
@@ -699,7 +771,7 @@ class Species:
         Return the function for the electronic density Laplacian.
 
         .. math::
-            
+
             \nabla^2 \rho(\mathbf{r}) = \frac{d^2 \rho(r)}{dr^2} + \frac{2}{r} \frac{d \rho(r)}{dr}
 
         Parameters
@@ -714,13 +786,13 @@ class Species:
             By default, all orbitals of the given spin(s) are included.
         log : bool, default=False
             Whether the logarithm of the density is used for interpolation.
-        
+
         Returns
         -------
         Callable[np.ndarray(N,) -> np.ndarray(N,)]
             a callable function evaluating the Laplacian of the density given a set of radial
             points (1-D array).
-        
+
         Notes
         -----
         When this function is evaluated at a point close to zero, the Laplacian becomes undefined.
@@ -738,7 +810,7 @@ class Species:
                 laplacian = dd_dens_spline(rs) + 2 * d_dens_sp_spline(rs) / rs
                 laplacian = np.where(rs < 1e-10, 0.0, laplacian)
             return laplacian
-        
+
         return densityspline_like_func
 
     @spline
