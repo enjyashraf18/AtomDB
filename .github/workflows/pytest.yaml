@@ -35,6 +35,7 @@ jobs:
         run: |
           pip install -e '.[dev,test_extra]'
 
+
       - name: Run pytest default tests
         uses: pavelzw/pytest-action@v2
         with:
@@ -53,3 +54,4 @@ jobs:
           click-to-expand: true
           report-title: 'Dev Test Report'
           pytest-args: '-m dev'
+

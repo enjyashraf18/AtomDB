@@ -1,6 +1,9 @@
 from enum import IntEnum
 from numbers import Integral
+<<<<<<< HEAD
 import atexit
+=======
+>>>>>>> da48e1b (Convert numeric dataset files from msgpack to HDF5)
 import tables as pt
 import numpy as np
 from importlib_resources import files

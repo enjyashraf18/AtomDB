@@ -3,16 +3,15 @@ import numpy as np
 from importlib_resources import files
 import tables as pt
 from dataclasses import asdict
-from atomdb.datasets.slater.run import NPOINTS
 from atomdb.periodic_test import element_symbol_map, ElementAttr
 
 
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings("ignore", category=pt.NaturalNameWarning)
 
-max_norba = 56
+NPOINTS = 1000
 
-SLATER_PROPERTY_CONFIGS = [
+NUMERIC_PROPERTY_CONFIGS = [
     {
         "SpeciesInfo": "elem",
         "type": "string",
@@ -42,114 +41,27 @@ SLATER_PROPERTY_CONFIGS = [
         "type": "float",
     },
     {
-        "SpeciesInfo": "ip",
-        "type": "float",
-    },
-    {
-        "SpeciesInfo": "mu",
-        "type": "float",
-    },
-    {
-        "SpeciesInfo": "eta",
-        "type": "float",
-    },
-    {
-        "SpeciesInfo": "nbasis",
-        "type": "int",
-    },
-    {
         "property": "obasis_name",
         "table_name": "obasis_name",
         "description": "Orbital basis name",
         "type": "string",
     },
-    {
-        "array_property": "mo_energy_a",
-        "table_name": "mo_energy_a",
-        "description": "Alpha MO Energies",
-    },
-    {
-        "array_property": "mo_energy_b",
-        "table_name": "mo_energy_b",
-        "description": "Beta MO Energies",
-    },
-    {
-        "array_property": "mo_occs_a",
-        "table_name": "mo_occs_a",
-        "description": "Alpha MO Occupations",
-    },
-    {
-        "array_property": "mo_occs_b",
-        "table_name": "mo_occs_b",
-        "description": "Alpha MO Energies",
-    },
-    {"Carray_property": "rs", "table_name": "rs", "folder": "RadialGrid", "spins": "no"},
-    {
-        "Carray_property": "mo_dens_a",
-        "table_name": "mo_dens_a",
-        "folder": "Density",
-        "spins": "yes",
-    },
-    {
-        "Carray_property": "mo_dens_b",
-        "table_name": "mo_dens_b",
-        "folder": "Density",
-        "spins": "yes",
-    },
-    {"Carray_property": "dens_tot", "table_name": "dens_tot", "folder": "Density", "spins": "no"},
-    {
-        "Carray_property": "mo_d_dens_a",
-        "table_name": "mo_d_dens_a",
-        "folder": "DensityGradient",
-        "spins": "yes",
-    },
-    {
-        "Carray_property": "mo_d_dens_b",
-        "table_name": "mo_d_dens_b",
-        "folder": "DensityGradient",
-        "spins": "yes",
-    },
+    {"Carray_property": "rs", "table_name": "rs", "folder": "RadialGrid"},
+    {"Carray_property": "dens_tot", "table_name": "dens_tot", "folder": "Density"},
     {
         "Carray_property": "d_dens_tot",
         "table_name": "d_dens_tot",
         "folder": "DensityGradient",
-        "spins": "no",
-    },
-    {
-        "Carray_property": "mo_dd_dens_a",
-        "table_name": "mo_dd_dens_a",
-        "folder": "DensityLaplacian",
-        "spins": "yes",
-    },
-    {
-        "Carray_property": "mo_dd_dens_b",
-        "table_name": "mo_dd_dens_b",
-        "folder": "DensityLaplacian",
-        "spins": "yes",
     },
     {
         "Carray_property": "dd_dens_tot",
         "table_name": "dd_dens_tot",
         "folder": "DensityLaplacian",
-        "spins": "no",
-    },
-    {
-        "Carray_property": "mo_ked_a",
-        "table_name": "mo_ked_a",
-        "folder": "KineticEnergyDensity",
-        "spins": "yes",
-    },
-    {
-        "Carray_property": "mo_ked_b",
-        "table_name": "mo_ked_b",
-        "folder": "KineticEnergyDensity",
-        "spins": "yes",
     },
     {
         "Carray_property": "ked_tot",
         "table_name": "ked_tot",
         "folder": "KineticEnergyDensity",
-        "spins": "no",
     },
 ]
 
@@ -166,11 +78,6 @@ class FloatPropertyDescription(pt.IsDescription):
     value = pt.Float64Col()
 
 
-# static definition
-class ArrayPropertyDescription(pt.IsDescription):
-    value = pt.Float64Col(shape=(max_norba,))
-
-
 class SpeciesInfo(pt.IsDescription):
     """Schema for SpeciesInfo table."""
 
@@ -180,11 +87,7 @@ class SpeciesInfo(pt.IsDescription):
     nexc = pt.Int32Col()
     nelec = pt.Int32Col()
     nspin = pt.Int32Col()
-    nbasis = pt.Int32Col()
     energy = pt.Float64Col()
-    ip = pt.Float64Col()
-    mu = pt.Float64Col()
-    eta = pt.Float64Col()
 
 
 def create_species_info_table(species_info_table_row, prop_name, prop_type, value):
@@ -247,58 +150,6 @@ def create_properties_tables(hdf5_file, parent_folder, config, value):
     table.flush()
 
 
-def create_properties_arrays(hdf5_file, parent_folder, table_name, description, data):
-    """Creates a table for storing an array property in the HDF5 file.
-
-    Args:
-        hdf5_file (tables.File): The open HDF5 file where the array will be created.
-        parent_folder (tables.Group): The parent folder in the HDF5 file where the table will be stored.
-        table_name (str): Name of the table to create.
-        description (str): Description of the table.
-        data (numpy.ndarray): The array data to store in the table.
-    """
-<<<<<<< HEAD
-    filters = pt.Filters(complevel=5, complib="blosc2")
-=======
-    filters = pt.Filters(complevel=5, complib="blosc2:lz4")
->>>>>>> da48e1b (Convert numeric dataset files from msgpack to HDF5)
-
-    # Create the table and populate the data
-    table = hdf5_file.create_table(
-        parent_folder, table_name, ArrayPropertyDescription, description, filters=filters
-    )
-    row = table.row
-    padded_data = np.pad(data, (0, max_norba - len(data)), "constant", constant_values=0)
-    row["value"] = padded_data
-    row.append()
-    table.flush()
-
-
-def create_spins_array(h5file, parent_folder, key, array_data, shape):
-    """Creates a  CArray for storing spin-dependent array data in the HDF5 file.
-
-    Args:
-        hdf5_file (tables.File): The open HDF5 file where the CArray will be created.
-    parent_folder (tables.Group): The parent folder in the HDF5 file where the CArray will be stored.
-        key (str): Name of the CArray.
-        array_data (numpy.ndarray): The array data to store in the CArray.
-        shape (int): The total size of the CArray.
-    """
-    data_length = len(array_data)
-<<<<<<< HEAD
-    filters = pt.Filters(complevel=5, complib="blosc2")
-=======
-    filters = pt.Filters(complevel=5, complib="blosc2:lz4")
->>>>>>> da48e1b (Convert numeric dataset files from msgpack to HDF5)
-
-    # Create the CArray and populate the data
-    array = h5file.create_carray(
-        parent_folder, key, pt.Float64Atom(), shape=(shape,), filters=filters
-    )
-    array[:data_length] = array_data
-    array[data_length:] = 0
-
-
 def create_tot_array(h5file, parent_folder, key, array_data):
     """Creates a CArray for storing total (non-spin-dependent) array data in the HDF5 file.
 
@@ -308,12 +159,11 @@ def create_tot_array(h5file, parent_folder, key, array_data):
         key (str): Name of the CArray.
         array_data (numpy.ndarray): The array data to store in the CArray.
     """
+    if array_data is None:
+        array_data = np.zeros(NPOINTS)
+
     data_length = len(array_data)
-<<<<<<< HEAD
-    filters = pt.Filters(complevel=5, complib="blosc2")
-=======
     filters = pt.Filters(complevel=5, complib="blosc2:lz4")
->>>>>>> da48e1b (Convert numeric dataset files from msgpack to HDF5)
 
     # Create the CArray and populate the data
     tot_gradient_array = h5file.create_carray(
@@ -338,7 +188,6 @@ def create_hdf5_file(DATASETS_H5FILE, fields, dataset, mult):
     """
     fields = asdict(fields)
     dataset = dataset.lower()
-    shape = NPOINTS * max_norba
 
     elem = fields["elem"]
     nexc = fields["nexc"]
@@ -392,7 +241,7 @@ def create_hdf5_file(DATASETS_H5FILE, fields, dataset, mult):
     species_info_table_row = species_info_table.row
 
     # Create basic property tables
-    for config in SLATER_PROPERTY_CONFIGS:
+    for config in NUMERIC_PROPERTY_CONFIGS:
         if "SpeciesInfo" in config:
             prop_name = config["SpeciesInfo"]
             create_species_info_table(
@@ -405,28 +254,12 @@ def create_hdf5_file(DATASETS_H5FILE, fields, dataset, mult):
                 DATASETS_H5FILE, folders["Properties"], config, fields[prop_name]
             )
 
-        # Create array property tables
-        elif "array_property" in config:
-            prop_name = config["array_property"]
-            create_properties_arrays(
-                DATASETS_H5FILE,
-                folders["Properties"],
-                config["table_name"],
-                config["description"],
-                fields[prop_name],
-            )
-
         elif "Carray_property" in config:
             prop_name = config["Carray_property"]
             parent_folder = folders[config["folder"]]
-            if config["spins"] == "yes":
-                create_spins_array(
-                    DATASETS_H5FILE, parent_folder, config["table_name"], fields[prop_name], shape
-                )
-            elif config["spins"] == "no":
-                create_tot_array(
-                    DATASETS_H5FILE, parent_folder, config["table_name"], fields[prop_name]
-                )
+            create_tot_array(
+                DATASETS_H5FILE, parent_folder, config["table_name"], fields[prop_name]
+            )
 
     species_info_table_row.append()
     species_info_table.flush()
