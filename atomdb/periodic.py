@@ -29,7 +29,7 @@ __all__ = [
 
 def setup_element():
     r"""Generate the ``Element`` class and helper functions."""
-    data, props, srcs, units, prop2col, num2str, str2num = get_data_refactored()
+    data, props, srcs, units, prop2col, num2str, str2num = get_data()
     prop2name, prop2desc, prop2src, prop2url, prop2note = get_info()
 
     def element_number(elem):
@@ -256,34 +256,40 @@ def get_data_refactored():
             srcs.append(source)
             units.append(unit)
             # prop2col.setdefault(prop_name, {})[source] = len(props) - 1
+            # update property to column mapping
             if prop_name not in prop2col:
                 prop2col[prop_name] = {}
             prop2col[prop_name][source] = len(props) - 1
 
-
+    # open elements_data hdf5 file
     with pt.open_file(elements_data_hdf5, mode="r") as h5file:
         elements_group = h5file.root.Elements
         # _v_groups is a dictionary containing all the subgroups under a given group
+        # get all element groups sorted by atomic number
         element_groups = sorted(elements_group._v_groups.keys(), key=lambda  x: int(x)) # returns atnum (001 to the end)
 
+        # use first element (H) to determine data structure
         first_element = elements_group._f_get_child("001")
 
+        # basic properties (excluding atomic number, symbol, and name)
         basic_props = [
             col for col in first_element.basic_properties.colnames
             if col not in EXCLUDED_PROPS
         ]
 
         props.extend(basic_props)
-        srcs.extend([''] * len(basic_props))
-        units.extend(['int'] * len(basic_props))
+        srcs.extend([''] * len(basic_props)) # Basic props have no specific source
+        units.extend(['int'] * len(basic_props)) # Basic props are integers
         for idx, prop in enumerate(basic_props):
             prop2col[prop] = {'': idx}
 
+        # process all tables (non-basic properties)
         for table_name, table in first_element._v_leaves.items():
             if table_name != 'basic_properties':
                 prop_name = TABLE_TO_PROP.get(table_name, table_name)
                 process_table(table, prop_name)
 
+        # process Radius subgroup 
         if 'Radius' in first_element._v_groups:
             for table_name, table in first_element.Radius._v_leaves.items():
                 prop_name = TABLE_TO_PROP.get(table_name, table_name)
