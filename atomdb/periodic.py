@@ -1,8 +1,23 @@
 from csv import reader
-
+import tables as pt
 from importlib_resources import files
 
 from atomdb.utils import CONVERTOR_TYPES
+
+elements_data_hdf5 = files("atomdb.data").joinpath("elements_data.h5")
+
+TABLE_TO_PROP = {
+        'atmass': 'mass',
+        'polarizability': 'pold',
+        'dispersion_c6': 'c6',
+        'Energy': 'eneg',
+        'cov_radius': 'cov_radius',
+        'vdw_radius': 'vdw_radius',
+        'at_radius': 'at_radius'
+}
+
+EXCLUDED_PROPS = ['atnum', 'symbol', 'name']
+
 
 __all__ = [
     "Element",
@@ -14,7 +29,7 @@ __all__ = [
 
 def setup_element():
     r"""Generate the ``Element`` class and helper functions."""
-    data, props, srcs, units, prop2col, num2str, str2num = get_data()
+    data, props, srcs, units, prop2col, num2str, str2num = get_data_refactored()
     prop2name, prop2desc, prop2src, prop2url, prop2note = get_info()
 
     def element_number(elem):
@@ -210,6 +225,92 @@ def get_data():
         # Convert the rest of the data to numbers
         for i, (unit, val) in enumerate(zip(units, row)):
             row[i] = CONVERTOR_TYPES[unit](val) if val else None
+
+    print(f"data {data}")
+    print(f"props {props}")
+    print(f"srcs {srcs}")
+    print(f"units {units}")
+    print(f"prop2col {prop2col}")
+    print(f"num2str {num2str}")
+    print(f"str2num {str2num}")
+    return data, props, srcs, units, prop2col, num2str, str2num
+
+
+def get_data_refactored():
+    r"""Extract the contents of ``data/elements_data.h5``."""
+
+    data = []
+    props = []
+    srcs = []
+    units = []
+    prop2col = {}
+    num2str = {}
+    str2num = {}
+
+    def process_table(table, prop_name):
+        """Helper to process a table and update props/srcs/units"""
+        for row in table:
+            source = row['source'].decode('utf-8')
+            unit = row['unit'].decode('utf-8')
+            props.append(prop_name)
+            srcs.append(source)
+            units.append(unit)
+            # prop2col.setdefault(prop_name, {})[source] = len(props) - 1
+            if prop_name not in prop2col:
+                prop2col[prop_name] = {}
+            prop2col[prop_name][source] = len(props) - 1
+
+
+    with pt.open_file(elements_data_hdf5, mode="r") as h5file:
+        elements_group = h5file.root.Elements
+        # _v_groups is a dictionary containing all the subgroups under a given group
+        element_groups = sorted(elements_group._v_groups.keys(), key=lambda  x: int(x)) # returns atnum (001 to the end)
+
+        first_element = elements_group._f_get_child("001")
+
+        basic_props = [
+            col for col in first_element.basic_properties.colnames
+            if col not in EXCLUDED_PROPS
+        ]
+
+        props.extend(basic_props)
+        srcs.extend([''] * len(basic_props))
+        units.extend(['int'] * len(basic_props))
+        for idx, prop in enumerate(basic_props):
+            prop2col[prop] = {'': idx}
+
+        for table_name, table in first_element._v_leaves.items():
+            if table_name != 'basic_properties':
+                prop_name = TABLE_TO_PROP.get(table_name, table_name)
+                process_table(table, prop_name)
+
+        if 'Radius' in first_element._v_groups:
+            for table_name, table in first_element.Radius._v_leaves.items():
+                prop_name = TABLE_TO_PROP.get(table_name, table_name)
+                process_table(table, prop_name)
+
+        #  processing each element in the table
+        for element_group_num in element_groups:
+            element_group = elements_group._v_groups[element_group_num]
+
+            # basic properties
+            basic_properties = element_group.basic_properties[0]
+            atnum = int(basic_properties['atnum'])
+            symbol = basic_properties['symbol'].decode('utf-8')
+            name = basic_properties['name'].decode('utf-8')
+
+            num2str[atnum] = (symbol, name)
+            str2num.update({symbol: atnum, name: atnum, name.lower(): atnum})
+
+
+    print(f"data {data}")
+    print(f"props {props}")
+    print(f"srcs {srcs}")
+    print(f"units {units}")
+    print(f"prop2col {prop2col}")
+    print(f"num2str {num2str}")
+    print(f"str2num {str2num}")
+
     return data, props, srcs, units, prop2col, num2str, str2num
 
 

@@ -179,7 +179,6 @@ def read_elements_data_csv(elements_data_csv):
     return data, unique_headers, sources_data, units_data
 
 
-
 def read_data_info_csv(data_info_csv):
     """
     Read and parse the data_info.csv file containing metadata.
@@ -286,7 +285,6 @@ def write_elements_data_to_hdf5(data, unique_headers, sources_data, units_data):
     h5file.close()
 
 
-
 def write_data_info_to_hdf5(data_info_list):
     """
         Write dara from data_info.csv to the HDF5 file.
@@ -313,7 +311,6 @@ def write_data_info_to_hdf5(data_info_list):
             table_row['notes'] = row.get('Notes', '').encode('utf-8')
             table_row.append()
         property_info_table.flush()
-
 
 
 if __name__ == "__main__":
