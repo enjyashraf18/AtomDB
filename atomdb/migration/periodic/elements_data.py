@@ -1,18 +1,17 @@
 import csv
 import tables as pt
 import numpy as np
-from importlib_resources import \
-files
+from importlib_resources import files
 import warnings
+from atomdb.utils import CONVERTOR_TYPES
 
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings('ignore', category=pt.NaturalNameWarning)
 
-
 # Set-up variables
 elements_data_csv = files("atomdb.data").joinpath("elements_data.csv")
 data_info_csv = files("atomdb.data").joinpath("data_info.csv")
-hdf5_file = "elements_data.h5"
+hdf5_file = files("atomdb.data").joinpath("elements_data.h5")
 
 
 # Properties of each element in the HDF5 file.
@@ -93,22 +92,11 @@ PROPERTY_CONFIGS = [
     },
     {
         'property': 'eneg',
-        'table_name': 'Energy',
+        'table_name': 'eneg',
         'description': 'Electronegativity'
     }
 ]
 
-#
-# # Periodic tables data schema definitions
-# class ElementDescription(pt.IsDescription):
-#     """Schema for the basic_properties table for each element."""
-#     atnum = pt.Int32Col(pos=0)
-#     symbol = pt.StringCol(2, pos=1)
-#     name = pt.StringCol(25, pos=2)
-#     group = pt.Int32Col(pos=3)
-#     period = pt.Int32Col(pos=4)
-#     mult = pt.Int32Col(pos=5)
-#
 
 class NumberElementDescription(pt.IsDescription):
     value = pt.Int32Col()
@@ -163,6 +151,7 @@ def create_properties_tables(hdf5_file, parent_folder, table_name, table_descrip
         if col in row_data and row_data[col].strip():
             try:
                 value = float(row_data[col])
+                value = CONVERTOR_TYPES[unit](value)
             except (ValueError, TypeError):
                 value = np.nan
 
@@ -186,7 +175,7 @@ def create_basic_properties_tables(hdf5_file, parent_folder, table_name, row_des
         table_name (str): Name of the table.
         row_description: PyTables IsDescription class for the table schema.
         table_description (str): Description of the table.
-        value: The value to store in the table (integer or string).
+        value (integer or string): The value to store in the table.
     """
     table = hdf5_file.create_table(parent_folder, table_name, row_description, table_description)
     row = table.row
@@ -206,8 +195,8 @@ def read_elements_data_csv(elements_data_csv):
             elements_data_csv: Path to the elements_data.csv file.
 
         Returns:
-            - data: List of dictionaries containing element data.
-            - unique_headers: List of unique column headers.
+            - data (List): List of dictionaries containing element data.
+            - unique_headers (List): List of unique column headers.
             - sources_data (dict): sources of each property.
             - units_data (dict): units of each property.
         """
@@ -252,7 +241,7 @@ def read_data_info_csv(data_info_csv):
         data_info_csv: Path to the data_info.csv file.
 
     Returns:
-        data_info: List of dictionaries containing metadata for each property.
+        data_info (List): List of dictionaries containing metadata for each property.
     """
     # Opens the csv file, filters out comment lines (starting with #) and empty lines.
     with open(data_info_csv, 'r') as f:
@@ -284,7 +273,14 @@ def read_data_info_csv(data_info_csv):
 
 
 def write_elements_data_to_hdf5(data, unique_headers, sources_data, units_data):
-    """Write element data to an HDF5 file."""
+    """ Write element data to an HDF5 file using PyTables.
+
+    Args:
+        data (list of dict): List of dictionaries containing element data.
+        unique_headers (list of str): List of unique column headers from the data, used to identify properties.
+        sources_data (dict): sources of each property.
+        units_data (dict): units of each property.
+    """
     h5file = pt.open_file(hdf5_file, mode="w", title='Periodic Data')
     elements_group = h5file.create_group('/', 'Elements', 'Elements Data')
 
@@ -302,6 +298,7 @@ def write_elements_data_to_hdf5(data, unique_headers, sources_data, units_data):
                 description = config['description']
                 prop_type = config['type']
 
+                # checking the property type to use the relevant ElementDescription class
                 if prop_type == 'int':
                     row_description = NumberElementDescription
                     value = int(row[property_name]) if property_name in row and row[property_name].strip() else 0
@@ -311,11 +308,13 @@ def write_elements_data_to_hdf5(data, unique_headers, sources_data, units_data):
 
                 create_basic_properties_tables(h5file, element_group, table_name, row_description, description, value, prop_type)
 
-        for config in PROPERTY_CONFIGS:
-            if 'property' in config:
+
+            # handle rest of the properties
+            else:
                 columns = [col for col in unique_headers if col.startswith(config['property'])]
                 if columns:
-                    create_properties_tables(h5file, element_group, config['table_name'], config['description'], PropertyValues, columns, row, sources_data, units_data)
+                    create_properties_tables(h5file, element_group, config['table_name'], config['description'], PropertyValues, columns, row,
+                                             sources_data, units_data)
 
     h5file.close()
 
