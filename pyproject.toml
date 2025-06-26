@@ -42,7 +42,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "numpy>=1.16",
+    "numpy>=1.23.0",
     "scipy>=1.4",
     "msgpack>=1.0.0",
     "msgpack-numpy>=0.4.8",
