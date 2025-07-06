@@ -26,6 +26,10 @@ from grid.rtransform import ExpRTransform
 # from importlib_resources import files
 from atomdb.utils import DEFAULT_DATAPATH
 from scipy.special import factorial
+import tables as pt
+from dataclasses import dataclass, field
+from typing import Optional, Dict
+
 
 
 __all__ = ["AtomicDensity", "load_slater_wfn", "run"]
@@ -38,6 +42,61 @@ NPOINTS = 10000
 # DATAPATH = files("atomdb.datasets.slater.raw")
 # DATAPATH = os.path.abspath(DATAPATH._paths[0])
 
+@dataclass
+class SlaterDefinitionClass:
+    """Data structure for the Slater dataset."""
+
+    #species info
+    elem: str
+    atnum: int
+    nelec: int
+    nspin: int
+    nexc: int
+    obasis_name: str
+
+    # properties (all from multiple sources Dict[str, float] )
+    atmass: Optional[Dict[str, float]]
+    cov_radius: Optional[Dict[str, float]]
+    vdw_radius: Optional[Dict[str, float]]
+    at_radius: Optional[Dict[str, float]]
+    polarizability: Optional[Dict[str, float]]
+    dispersion: Optional[Dict[str, float]]
+
+    # [float]
+    energy: Optional[float]
+    ip: Optional[float]
+    mu: Optional[float]
+    eta: Optional[float]
+
+    # [np.ndarray]
+    mo_energy_a: Optional[np.ndarray]
+    mo_energy_b:  Optional[np.ndarray]
+
+    mo_occs_a: Optional[np.ndarray]
+    mo_occs_b: Optional[np.ndarray]
+
+    # Radial grid
+    rs: np.ndarray = Optional[np.ndarray]
+
+    # Density
+    mo_dens_a: np.ndarray = Optional[np.ndarray]
+    mo_dens_b: np.ndarray = Optional[np.ndarray]
+    dens_tot: np.ndarray = Optional[np.ndarray]
+
+    # Density gradient
+    mo_d_dens_a: np.ndarray = Optional[np.ndarray]
+    mo_d_dens_b: np.ndarray = Optional[np.ndarray]
+    d_dens_tot: np.ndarray = Optional[np.ndarray]
+
+    # Density laplacian
+    mo_dd_dens_a: np.ndarray = Optional[np.ndarray]
+    mo_dd_dens_b: np.ndarray = Optional[np.ndarray]
+    dd_dens_tot: np.ndarray = Optional[np.ndarray]
+
+    # KED
+    mo_ked_a: np.ndarray = Optional[np.ndarray]
+    mo_ked_b: np.ndarray = Optional[np.ndarray]
+    ked_tot: np.ndarray = Optional[np.ndarray]
 
 class AtomicDensity:
     r"""
@@ -1139,20 +1198,20 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     mu = None
     eta = None
 
-    # Return Species instance
-    fields = dict(
+    # Return fields
+    fields = SlaterDefinitionClass(
         elem=elem,
-        atnum=atnum,
+        atnum=atnum,  #
         obasis_name="Slater",
         nelec=nelec,
         nspin=nspin,
         nexc=nexc,
-        atmass=atmass,
-        cov_radius=cov_radius,
-        vdw_radius=vdw_radius,
-        at_radius=at_radius,
-        polarizability=polarizability,
-        dispersion=dispersion,
+        atmass=atmass,  #
+        cov_radius=cov_radius,  #
+        vdw_radius=vdw_radius,  #
+        at_radius=at_radius,  #
+        polarizability=polarizability,  #
+        dispersion=dispersion,  #
         energy=energy,
         mo_energy_a=mo_e_up,
         mo_energy_b=mo_e_dn,
@@ -1178,5 +1237,12 @@ def run(elem, charge, mult, nexc, dataset, datapath):
         mo_ked_a=mo_ked_a.flatten(),
         mo_ked_b=mo_ked_b.flatten(),
         ked_tot=ked_tot,
+
     )
-    return atomdb.Species(dataset, fields)
+    return fields
+    # return atomdb.Species(dataset, fields)
+
+
+
+def create_hdf5_file(definition, datapath):
+    pass
