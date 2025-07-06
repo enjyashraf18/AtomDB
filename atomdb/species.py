@@ -80,42 +80,6 @@ def default_matrix():
     return np.zeros(0).reshape(1, 0)
 
 
-# def scalar(method):
-#     r"""Expose a SpeciesData field."""
-#     name = method.__name__
-#
-#     @property
-#     def wrapper(self):
-#         print("hi")
-#
-#         # Map the name of the method in the SpeciesData class to the name in the Elements class
-#         # This dict can be removed if the Elements csv file uses the same names as the SpeciesData class.
-#         namemap = {
-#             "cov_radius": "cov_radius",
-#             "vdw_radius": "vdw_radius",
-#             "at_radius": "at_radius",
-#             "polarizability": "pold",
-#             "dispersion_c6": "c6",
-#             "atmass": "mass",
-#         }
-#
-#         if name == "atmass":
-#             print(f"inside atmass {getattr(Element(self._data.elem), namemap[name])}")
-#             return getattr(Element(self._data.elem), namemap[name])
-#         if name in namemap:
-#             # Only return Element property if neutral, otherwise None
-#             charge = self._data.atnum - self._data.nelec
-#             print(f"charge {charge}")
-#             print(f"inside the other {getattr(Element(self._data.elem), namemap[name])}")
-#             return getattr(Element(self._data.elem), namemap[name]) if charge == 0 else None
-#
-#         return getattr(self._data, name)
-#
-#     # conserve the docstring of the method
-#     wrapper.__doc__ = method.__doc__
-#     return wrapper
-
-
 def scalar(method):
     r"""Expose a SpeciesData field."""
     name = method.__name__
@@ -874,9 +838,24 @@ def compile_species(
     makedirs(path.join(datapath, dataset.lower(), "raw"), exist_ok=True)
     # Import the compile script for the appropriate dataset
     submodule = import_module(f"atomdb.datasets.{dataset}.run")
+    dataset_def = submodule.run(elem, charge, mult, nexc, dataset, datapath)
+    fields = asdict(dataset_def)
+
+    # print all fields 
+    for key, value in fields.items():
+        if isinstance(value, np.ndarray):
+            print(f"{key}: shape={value.shape}, first 5 elements={value.flat[:5]}")
+        else:
+            print(f"{key}: {value}")
+
+    species = Species(dataset, fields)
+    return species
+
+
+    ## old stuff ##
     # Compile the Species instance and dump the database entry
-    species = submodule.run(elem, charge, mult, nexc, dataset, datapath)
-    dump(species, datapath=datapath)
+    # species = submodule.run(elem, charge, mult, nexc, dataset, datapath)
+    # dump(species, datapath=datapath)
 
 
 def dump(*species, datapath=DEFAULT_DATAPATH):
