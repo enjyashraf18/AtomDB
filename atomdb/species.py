@@ -838,10 +838,14 @@ def compile_species(
     makedirs(path.join(datapath, dataset.lower(), "raw"), exist_ok=True)
     # Import the compile script for the appropriate dataset
     submodule = import_module(f"atomdb.datasets.{dataset}.run")
+    creator = import_module(f"atomdb.datasets.{dataset}.h5file_creator")
+
     dataset_def = submodule.run(elem, charge, mult, nexc, dataset, datapath)
     fields = asdict(dataset_def)
 
-    # print all fields 
+    creator.create_hdf5_file(fields, dataset, elem, charge, mult, nexc)
+
+    # print all fields
     for key, value in fields.items():
         if isinstance(value, np.ndarray):
             print(f"{key}: shape={value.shape}, first 5 elements={value.flat[:5]}")
