@@ -2,7 +2,7 @@ import warnings
 import numpy as np
 from importlib_resources import files
 import tables as pt
-
+from dataclasses import asdict
 
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings('ignore', category=pt.NaturalNameWarning)
@@ -231,6 +231,7 @@ def create_tot_array(h5file, parent_folder, key, array_data):
 
 
 def create_hdf5_file(fields, dataset, elem, charge, mult, nexc):
+    fields = asdict(fields)
     dataset = dataset.lower()
     shape = 10000 * max_norba
 
