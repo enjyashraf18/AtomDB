@@ -268,66 +268,6 @@ class _AtomicOrbitals:
         self.nbasis = self.norba  # number of spatial basis functions
 
 
-@dataclass(eq=False, order=False)
-class SpeciesData:
-    r"""Database entry fields for atomic and ionic species."""
-
-    # Species info
-    elem: str = field(default_factory=default_required("elem", "str"))
-    atnum: int = field(default_factory=default_required("atnum", "int"))
-    nelec: int = field(default_factory=default_required("nelec", "int"))
-    nspin: int = field(default_factory=default_required("nspin", "int"))
-    nexc: int = field(default_factory=default_required("nexc", "int"))
-
-    # Scalar properties
-    atmass: float = field(default=None)
-    cov_radius: float = field(default=None)
-    vdw_radius: float = field(default=None)
-    at_radius: float = field(default=None)
-    polarizability: float = field(default=None)
-    dispersion: float = field(default=None)
-
-    # Scalar energy and CDFT-related properties
-    energy: float = field(default=None)
-    ip: float = field(default=None)
-    mu: float = field(default=None)
-    eta: float = field(default=None)
-
-    # Basis set name
-    obasis_name: str = field(default=None)
-
-    # Radial grid
-    rs: ndarray = field(default_factory=default_vector)
-
-    # Orbital energies
-    mo_energy_a: ndarray = field(default_factory=default_vector)
-    mo_energy_b: ndarray = field(default_factory=default_vector)
-
-    # Orbital occupations
-    mo_occs_a: ndarray = field(default_factory=default_vector)
-    mo_occs_b: ndarray = field(default_factory=default_vector)
-
-    # Orbital densities
-    mo_dens_a: ndarray = field(default_factory=default_matrix)
-    mo_dens_b: ndarray = field(default_factory=default_matrix)
-    dens_tot: ndarray = field(default_factory=default_matrix)
-
-    # Orbital density gradients
-    mo_d_dens_a: ndarray = field(default_factory=default_matrix)
-    mo_d_dens_b: ndarray = field(default_factory=default_matrix)
-    d_dens_tot: ndarray = field(default_factory=default_matrix)
-
-    # Orbital density Laplacian
-    mo_dd_dens_a: ndarray = field(default_factory=default_matrix)
-    mo_dd_dens_b: ndarray = field(default_factory=default_matrix)
-    dd_dens_tot: ndarray = field(default_factory=default_matrix)
-
-    # Orbital kinetic energy densities
-    mo_ked_a: ndarray = field(default_factory=default_matrix)
-    mo_ked_b: ndarray = field(default_factory=default_matrix)
-    ked_tot: ndarray = field(default_factory=default_matrix)
-
-
 class Species:
     r"""Properties of atomic and ionic species."""
 
@@ -345,7 +285,9 @@ class Species:
 
         """
         self._dataset = dataset.lower()
-        self._data = SpeciesData(**fields)
+        # self._data = SpeciesData(**fields)
+        self._data = fields
+        print(f"species data: {self._data}")
         self.spinpol = spinpol
         self.ao = _AtomicOrbitals(self._data)
 
@@ -838,47 +780,44 @@ def compile_species(
     makedirs(path.join(datapath, dataset.lower(), "raw"), exist_ok=True)
     # Import the compile script for the appropriate dataset
     submodule = import_module(f"atomdb.datasets.{dataset}.run")
-    creator = import_module(f"atomdb.datasets.{dataset}.h5file_creator")
-
-    dataset_def = submodule.run(elem, charge, mult, nexc, dataset, datapath)
-    fields = asdict(dataset_def)
-
-    creator.create_hdf5_file(fields, dataset, elem, charge, mult, nexc)
+    fields = submodule.run(elem, charge, mult, nexc, dataset, datapath)
+    dump(fields, dataset, elem, charge, mult, nexc)
 
     # print all fields
-    for key, value in fields.items():
-        if isinstance(value, np.ndarray):
-            print(f"{key}: shape={value.shape}, first 5 elements={value.flat[:5]}")
-        else:
-            print(f"{key}: {value}")
+    # for key, value in fields.items():
+    #     if isinstance(value, np.ndarray):
+    #         print(f"{key}: shape={value.shape}, first 5 elements={value.flat[:5]}")
+    #     else:
+    #         print(f"{key}: {value}")
 
-    species = Species(dataset, fields)
-    return species
-
-
-    ## old stuff ##
-    # Compile the Species instance and dump the database entry
-    # species = submodule.run(elem, charge, mult, nexc, dataset, datapath)
-    # dump(species, datapath=datapath)
+    # species = Species(dataset, fields)
+    # return species
 
 
-def dump(*species, datapath=DEFAULT_DATAPATH):
-    r"""Dump the Species instance(s) to a MessagePack file in the database.
 
-    Parameters
-    ----------
-    species: Iterable
-        Iterables of objects of class `Species`
-    datapath : str, optional
-        Path to the local AtomDB cache, by default DEFAULT_DATAPATH variable value.
-
+def dump(fields, dataset, elem, charge, mult, nexc):
+    r"""Dump the Species instance(s) to a hdf5 file in the database.
     """
-    for s in species:
-        fn = datafile(
-            s._data.elem, s.charge, s.mult, nexc=s.nexc, dataset=s.dataset, datapath=datapath
-        )
-        with open(fn, "wb") as f:
-            f.write(packb(asdict(s._data), default=encode))
+    creator = import_module(f"atomdb.datasets.{dataset}.h5file_creator")
+    creator.create_hdf5_file(fields, dataset, elem, charge, mult, nexc)
+
+# def dump(*species, datapath=DEFAULT_DATAPATH):
+#     r"""Dump the Species instance(s) to a MessagePack file in the database.
+#
+#     Parameters
+#     ----------
+#     species: Iterable
+#         Iterables of objects of class `Species`
+#     datapath : str, optional
+#         Path to the local AtomDB cache, by default DEFAULT_DATAPATH variable value.
+#
+#     """
+#     for s in species:
+#         fn = datafile(
+#             s._data.elem, s.charge, s.mult, nexc=s.nexc, dataset=s.dataset, datapath=datapath
+#         )
+#         with open(fn, "wb") as f:
+#             f.write(packb(asdict(s._data), default=encode))
 
 
 def load(

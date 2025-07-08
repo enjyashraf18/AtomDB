@@ -3,7 +3,7 @@ from atomdb.species import compile_species
 print("Starting compilation...")
 try:
     hydrogen = compile_species(
-        elem="H",
+        elem="Li",
         charge=0,
         mult= 2,
         dataset="slater",

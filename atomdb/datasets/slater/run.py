@@ -1180,7 +1180,9 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     mo_ked_a = species.eval_orbs_ked_positive_definite(rs)[:norba, :]
     mo_ked_b = species.eval_orbs_ked_positive_definite(rs)[:norba, :]
 
-    # Get information about the element
+
+
+    # Get information about the element --> (dont forget) needs to be refactored
     atom = Element(elem)
     atmass = atom.mass
     cov_radius, vdw_radius, at_radius, polarizability, dispersion = [
@@ -1192,6 +1194,8 @@ def run(elem, charge, mult, nexc, dataset, datapath):
         polarizability = atom.pold
         dispersion = {"C6": atom.c6}
 
+
+
     # Conceptual-DFT properties (WIP)
     ip = -mo_e_up[np.sum(occs_up) - 1]  # - energy of HOMO
     # ea = -mo_e_dn[np.sum(occs_dn)] if np.sum(occs_dn) < np.sum(occs_up) else None  # - LUMO energy
@@ -1201,7 +1205,7 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     # Return fields
     fields = SlaterDefinitionClass(
         elem=elem,
-        atnum=atnum,  #
+        atnum=atnum,
         obasis_name="Slater",
         nelec=nelec,
         nspin=nspin,
@@ -1240,9 +1244,4 @@ def run(elem, charge, mult, nexc, dataset, datapath):
 
     )
     return fields
-    # return atomdb.Species(dataset, fields)
 
-
-
-def create_hdf5_file(definition, datapath):
-    pass
