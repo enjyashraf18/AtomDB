@@ -3,6 +3,7 @@ import tables as pt
 import numpy as np
 from importlib_resources import files
 import warnings
+from atomdb.utils import CONVERTOR_TYPES
 
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings('ignore', category=pt.NaturalNameWarning)
@@ -91,7 +92,7 @@ PROPERTY_CONFIGS = [
     },
     {
         'property': 'eneg',
-        'table_name': 'Energy',
+        'table_name': 'eneg',
         'description': 'Electronegativity'
     }
 ]
@@ -150,6 +151,7 @@ def create_properties_tables(hdf5_file, parent_folder, table_name, table_descrip
         if col in row_data and row_data[col].strip():
             try:
                 value = float(row_data[col])
+                value = CONVERTOR_TYPES[unit](value)
             except (ValueError, TypeError):
                 value = np.nan
 

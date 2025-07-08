@@ -35,6 +35,7 @@ from atomdb.utils import DEFAULT_DATAPATH, DEFAULT_DATASET, DEFAULT_REMOTE
 from importlib_resources import \
 files
 import tables as pt
+from numbers import Integral
 
 elements_hdf5_file = files("atomdb.data").joinpath("elements_data.h5")
 
@@ -140,19 +141,16 @@ def scalar(method):
 
             # get the table node from the HDF5 file
             table = h5file.get_node(table_path)
-            # get the data type of the 'value' col in the table
-            value_col = table.coltypes.get("value")
 
             # Handle basic properties (single row)
             if table.nrows == 1:
                 value = table[0]["value"]
                 # if the value is an int, return it as an int
-                if isinstance(value_col, pt.Int32Col):
+                if isinstance(value, Integral):
                     return int(value)
                 # if the value is a string, decode from bytes
-                elif isinstance(value_col, pt.StringCol):
+                elif isinstance(value, bytes):
                     return value.decode("utf-8")
-
             else:
                 # handle properties with multiple sources
                 result = {}
