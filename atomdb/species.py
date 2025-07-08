@@ -46,10 +46,13 @@ PROPERTY_NAME_MAP = {
     "at_radius": "at_radius",
     "polarizability": "polarizability",
     "dispersion_c6": "dispersion_c6",
-    "elem": "symbol",
-    "atnum": "atnum",
-    "name": "name",
+    ## NOTE: I am leaving these properties out for now
+    # "elem": "symbol",
+    # "atnum": "atnum",
+    # "name": "name",
 }
+## NOTE: importing the H5 file at the top. Need to check with Michelle is this is her suggestion.
+H5FILE = pt.open_file(elements_hdf5_file, mode="r")
 
 __all__ = [
     "Species",
@@ -128,39 +131,44 @@ def scalar(method):
 
         # calculate charge then if charge is not zero (ions) --> return none
         charge = self._data.atnum - self._data.nelec
-        if charge != 0:
+        ## NOTE: the atomic mass is the only property from the HDF5 file we return even if charge is not 0
+        if charge != 0 and name != "atmass":
             return None
 
         # open the HDF5 file in read mode
-        with pt.open_file(elements_hdf5_file, mode="r") as h5file:
-            # get the element group
-            element_group = f"/Elements/{self._data.atnum:03d}"
+        # with pt.open_file(elements_hdf5_file, mode="r") as h5file:
+        # get the element group
+        element_group = f"/Elements/{self._data.atnum:03d}"
 
-            table_name = PROPERTY_NAME_MAP[name]
-            table_path = f"{element_group}/{table_name}"
+        table_name = PROPERTY_NAME_MAP[name]
+        table_path = f"{element_group}/{table_name}"
 
-            # get the table node from the HDF5 file
-            table = h5file.get_node(table_path)
+        # get the table node from the HDF5 file
+        table = H5FILE.get_node(table_path)
 
-            # Handle basic properties (single row)
-            if table.nrows == 1:
-                value = table[0]["value"]
-                # if the value is an int, return it as an int
-                if isinstance(value, Integral):
-                    return int(value)
-                # if the value is a string, decode from bytes
-                elif isinstance(value, bytes):
-                    return value.decode("utf-8")
-            else:
-                # handle properties with multiple sources
-                result = {}
-                for row in table:
-                    source = row["source"].decode("utf-8")
-                    value = row["value"]
-                    # exclude none values
-                    if not np.isnan(value):
-                        result[source] = float(value)
-                return result if result else None
+        ## FIXME: Lines 154-161 below were intended to read periodic properties
+        ## that had a single row in the table, like `elem`` and `atnum`. However,
+        ## the `dispersion_c6` group also has a single row table and gets returned here as a scalar
+        ## instead of a dictionary, which is what the tests expect.
+        # # Handle basic properties (single row)
+        # if table.nrows == 1:
+        #     value = table[0]["value"]
+        #     # if the value is an int, return it as an int
+        #     if isinstance(value, Integral):
+        #         return int(value)
+        #     # if the value is a string, decode from bytes
+        #     elif isinstance(value, bytes):
+        #         return value.decode("utf-8")
+        # else:
+        # handle properties with multiple sources
+        result = {}
+        for row in table:
+            source = row["source"].decode("utf-8")
+            value = row["value"]
+            # exclude none values
+            if not np.isnan(value):
+                result[source] = float(value)
+        return result if result else None
 
     wrapper.__doc__ = method.__doc__
     return wrapper
