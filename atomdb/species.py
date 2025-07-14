@@ -38,6 +38,11 @@ import tables as pt
 from numbers import Integral
 
 elements_hdf5_file = files("atomdb.data").joinpath("elements_data.h5")
+datasets_hdf5_file = files("atomdb.data").joinpath("datasets_data.h5")
+
+
+ELEMENTS_H5FILE = pt.open_file(elements_hdf5_file, mode="r")
+DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="r")
 
 PROPERTY_NAME_MAP = {
     "atmass": "atmass",
@@ -46,6 +51,7 @@ PROPERTY_NAME_MAP = {
     "at_radius": "at_radius",
     "polarizability": "polarizability",
     "dispersion_c6": "dispersion_c6",
+    "dispersion": "dispersion_c6",
     "elem": "symbol",
     "atnum": "atnum",
     "name": "name",
@@ -90,45 +96,80 @@ def scalar(method):
         if name not in PROPERTY_NAME_MAP:
             return getattr(self._data, name)
 
-        # calculate charge then if charge is not zero (ions) --> return none
-        charge = self._data.atnum - self._data.nelec
-        if charge != 0:
-            return None
+        get_scalar_data(name, self._data.atnum, self._data.nelec)
 
-        # open the HDF5 file in read mode
-        with pt.open_file(elements_hdf5_file, mode="r") as h5file:
-            # get the element group
-            element_group = f"/Elements/{self._data.atnum:03d}"
-
-            table_name = PROPERTY_NAME_MAP[name]
-            table_path = f"{element_group}/{table_name}"
-
-            # get the table node from the HDF5 file
-            table = h5file.get_node(table_path)
-
-            # Handle basic properties (single row)
-            if table.nrows == 1:
-                value = table[0]["value"]
-                # if the value is an int, return it as an int
-                if isinstance(value, Integral):
-                    return int(value)
-                # if the value is a string, decode from bytes
-                elif isinstance(value, bytes):
-                    return value.decode("utf-8")
-            else:
-                # handle properties with multiple sources
-                result = {}
-                for row in table:
-                    source = row["source"].decode("utf-8")
-                    value = row["value"]
-                    # exclude none values
-                    if not np.isnan(value):
-                        result[source] = float(value)
-                return result if result else None
+        # # calculate charge then if charge is not zero (ions) --> return none
+        # charge = self._data.atnum - self._data.nelec
+        # if charge != 0 and name != "atmass":
+        #     return None
+        #
+        # # get the element group
+        # element_group = f"/Elements/{self._data.atnum:03d}"
+        #
+        # table_name = PROPERTY_NAME_MAP[name]
+        # table_path = f"{element_group}/{table_name}"
+        #
+        # # get the table node from the HDF5 file
+        # table = ELEMENTS_H5FILE.get_node(table_path)
+        #
+        # # Handle basic properties (single column --> no sources)
+        # if len(table.colnames) == 1 and table.colnames[0] == "value":
+        #     value = table[0]["value"]
+        #     # if the value is an int, return it as an int
+        #     if isinstance(value, Integral):
+        #         return int(value)
+        #     # if the value is a string, decode from bytes
+        #     elif isinstance(value, bytes):
+        #         return value.decode("utf-8")
+        # else:
+        #     # handle properties with multiple sources
+        #     result = {}
+        #     for row in table:
+        #         source = row["source"].decode("utf-8")
+        #         value = row["value"]
+        #         # exclude none values
+        #         if not np.isnan(value):
+        #             result[source] = float(value)
+        #     return result if result else None
 
     wrapper.__doc__ = method.__doc__
     return wrapper
 
+
+def get_scalar_data(prop_name, atnum, nelec):
+    charge = atnum - nelec
+
+    if charge != 0 and prop_name != "atmass":
+        return None
+
+    # get the element group
+    element_group = f"/Elements/{atnum:03d}"
+
+    table_name = PROPERTY_NAME_MAP[prop_name]
+    table_path = f"{element_group}/{table_name}"
+
+    # get the table node from the HDF5 file
+    table = ELEMENTS_H5FILE.get_node(table_path)
+
+    # Handle basic properties (single column --> no sources)
+    if len(table.colnames) == 1 and table.colnames[0] == "value":
+        value = table[0]["value"]
+        # if the value is an int, return it as an int
+        if isinstance(value, Integral):
+            return int(value)
+        # if the value is a string, decode from bytes
+        elif isinstance(value, bytes):
+            return value.decode("utf-8")
+    else:
+        # handle properties with multiple sources
+        result = {}
+        for row in table:
+            source = row["source"].decode("utf-8")
+            value = row["value"]
+            # exclude none values
+            if not np.isnan(value):
+                result[source] = float(value)
+        return result if result else None
 
 
 def _remove_suffix(input_string, suffix):
@@ -286,8 +327,12 @@ class Species:
         """
         self._dataset = dataset.lower()
         # self._data = SpeciesData(**fields)
+
+        # converting fields from dict to DefinitionClass
+        submodule = import_module(f"atomdb.datasets.{dataset}.run")
+        fields = submodule.DefinitionClass(**fields)
+
         self._data = fields
-        print(f"species data: {self._data}")
         self.spinpol = spinpol
         self.ao = _AtomicOrbitals(self._data)
 
@@ -778,18 +823,23 @@ def compile_species(
     # Ensure directories exist
     makedirs(path.join(datapath, dataset.lower(), "db"), exist_ok=True)
     makedirs(path.join(datapath, dataset.lower(), "raw"), exist_ok=True)
+
     # Import the compile script for the appropriate dataset
     submodule = import_module(f"atomdb.datasets.{dataset}.run")
     fields = submodule.run(elem, charge, mult, nexc, dataset, datapath)
+
+    # create an hdf5 file for the species
     dump(fields, dataset, elem, charge, mult, nexc)
 
-    # print all fields
+
+    # fields = asdict(fields)
+    # # print all fields
     # for key, value in fields.items():
     #     if isinstance(value, np.ndarray):
     #         print(f"{key}: shape={value.shape}, first 5 elements={value.flat[:5]}")
     #     else:
     #         print(f"{key}: {value}")
-
+    #
     # species = Species(dataset, fields)
     # return species
 
@@ -800,24 +850,6 @@ def dump(fields, dataset, elem, charge, mult, nexc):
     """
     creator = import_module(f"atomdb.datasets.{dataset}.h5file_creator")
     creator.create_hdf5_file(fields, dataset, elem, charge, mult, nexc)
-
-# def dump(*species, datapath=DEFAULT_DATAPATH):
-#     r"""Dump the Species instance(s) to a MessagePack file in the database.
-#
-#     Parameters
-#     ----------
-#     species: Iterable
-#         Iterables of objects of class `Species`
-#     datapath : str, optional
-#         Path to the local AtomDB cache, by default DEFAULT_DATAPATH variable value.
-#
-#     """
-#     for s in species:
-#         fn = datafile(
-#             s._data.elem, s.charge, s.mult, nexc=s.nexc, dataset=s.dataset, datapath=datapath
-#         )
-#         with open(fn, "wb") as f:
-#             f.write(packb(asdict(s._data), default=encode))
 
 
 def load(
@@ -853,25 +885,27 @@ def load(
     Object of class Species
 
     """
-    fn = datafile(
-        elem,
-        charge,
-        mult,
-        nexc=nexc,
-        dataset=dataset,
-        datapath=datapath,
-        remotepath=remotepath,
-    )
-    if Ellipsis in (elem, charge, mult, nexc):
-        obj = []
+    dataset_path = f"/Datasets/{dataset}"
+    dataset_submodule = import_module(f"atomdb.datasets.{dataset}.h5file_creator")
+    DATASET_PROPERTY_CONFIGS = getattr(dataset_submodule, f"{dataset.upper()}_PROPERTY_CONFIGS")
 
-        for file in fn:
-            with open(file, "rb") as f:
-                obj.append(Species(dataset, unpackb(f.read(), object_hook=decode)))
+
+    if Ellipsis in (elem, charge, mult, nexc):
+        print("wildcard case inside load")
+        data_paths = datafile(elem, charge, mult, nexc=nexc, dataset=dataset)
+        # obj = []
+        # for data_path in data_paths:
+        #     fields = get_species_data(data_path, DATASET_PROPERTY_CONFIGS)
+        #     obj.append(Species(dataset, fields))
     else:
-        with open(fn, "rb") as f:
-            obj = Species(dataset, unpackb(f.read(), object_hook=decode))
-    return obj
+        data_path = f"{dataset_path}/{elem}/{elem}_{charge:03d}_{mult:03d}_{nexc:03d}"
+        fields = get_species_data(data_path, DATASET_PROPERTY_CONFIGS)
+        obj = Species(dataset, fields)
+
+    # return obj
+
+
+
 
 
 def datafile(
@@ -911,55 +945,80 @@ def datafile(
         Local path to the database file of a species in the AtomDB cache
 
     """
-    elem = "[^_]" if elem is Ellipsis else element_symbol(elem)
-    charge = "[^_]" if charge is Ellipsis else f"{charge:03d}"
-    mult = "[^_]" if mult is Ellipsis else f"{mult:03d}"
-    nexc = "[^_]" if nexc is Ellipsis else f"{nexc:03d}"
 
-    # Wildcard search for multiple species, use repodata.txt for matching
-    if "[^_]" in (elem, charge, mult, nexc):
-        # try to retrieve the repodata file from the remote URL
-        try:
-            repodata = pooch.retrieve(
-                url=f"{remotepath}{dataset.lower()}/db/repodata.txt",
-                known_hash=None,
-                path=path.join(datapath, dataset.lower(), "db"),
-                fname="repo_data.txt",
-            )
-        # if the file is not found or remote was not valid, use the local repodata file
-        except (requests.exceptions.HTTPError, ValueError):
-            repodata = path.join(datapath, dataset.lower(), "db", "repo_data.txt")
+    group_paths = []
+    dataset_path = f"/Datasets/{dataset}"
+    dataset_folder = DATASETS_H5FILE.get_node(dataset_path)
+    print(f"elem {elem}")
 
-        with open(repodata) as f:
-            data = f.read()
-            files = re.findall(rf"\b{elem}+_{charge}+_{mult}+_{nexc}\.msg\b", data)
-            species_list = []
-            for file in files:
-                # try to retrieve the file from the remote URL
-                try:
-                    element = pooch.retrieve(
-                        url=f"{remotepath}{dataset.lower()}/db/{file}",
-                        known_hash=None,
-                        path=path.join(datapath, dataset.lower(), "db"),
-                        fname=f"{file}",
-                    )
-                # if the file is not found, use the local file
-                except (requests.exceptions.HTTPError, ValueError):
-                    element = path.join(datapath, dataset.lower(), "db", file)
-                species_list.append(element)
-            return species_list
-    # try to retrieve the file from the remote URL
-    try:
-        species = pooch.retrieve(
-            url=f"{remotepath}{dataset.lower()}/db/{elem}_{charge}_{mult}_{nexc}.msg",
-            known_hash=None,
-            path=path.join(datapath, dataset.lower(), "db"),
-            fname=f"{elem}_{charge}_{mult}_{nexc}.msg",
-        )
-    # if the file is not found, use the local file
-    except (requests.exceptions.HTTPError, ValueError):
-        species = path.join(datapath, dataset.lower(), "db", f"{elem}_{charge}_{mult}_{nexc}.msg")
-    return species
+    # elem is specific
+    if elem is not Ellipsis:
+        print("elem is specific")
+        elem_folder = dataset_folder._f_get_child(elem)
+        for species_folder in elem_folder._v_groups:
+            if _matches(species_folder, charge, mult, nexc):
+                group_paths.append(f"{dataset_path}/{elem}/{species_folder}")
+        return group_paths
+
+    # elem is wildcard
+    print("elem is wildcard")
+    for elem, elem_folder in dataset_folder._v_groups.items():
+        for species_folder in elem_folder._v_groups:
+            if _matches(species_folder, charge, mult, nexc):
+                print(f"{dataset_path}/{elem}/{species_folder} matches")
+                group_paths.append(f"{dataset_path}/{elem}/{species_folder}")
+
+    print(group_paths)
+    return group_paths
+
+
+def _matches(element_folder_name, charge, mult, nexc):
+    _, extracted_charge, extracted_mult, extracted_nexc = element_folder_name.split("_")
+    return (
+    (charge is Ellipsis or int(extracted_charge) == charge) and
+    (mult is Ellipsis or int(extracted_mult) == mult) and
+    (nexc is Ellipsis or int(extracted_nexc) == nexc)
+    )
+
+
+def get_species_data(folder_path, DATASET_PROPERTY_CONFIGS):
+    fields = {}
+    dataset_folder = DATASETS_H5FILE.get_node(folder_path)
+
+
+    for config in DATASET_PROPERTY_CONFIGS:
+        if 'property' in config:
+            table = dataset_folder.Properties._f_get_child(config['table_name'])
+            value = table[0]['value']
+            if config['type'] == 'string':
+                value = value.decode('utf-8')
+            fields[config["property"]] = value
+
+
+        elif 'array_property' in config:
+            table = dataset_folder.Properties._f_get_child(config['table_name'])
+            fields[config["array_property"]] = table[0]['value']
+
+
+        elif 'Carray_property' in config:
+            folder = config['folder']
+            table = dataset_folder._f_get_child(folder)._f_get_child(config['table_name'])
+            fields[config['Carray_property']] = table[:]
+
+
+    fields['atnum'] = 6    #refactor after elements replacement
+
+    for prop in ('atmass', 'cov_radius', 'vdw_radius', 'at_radius', 'polarizability', 'dispersion'):
+        fields[prop] = get_scalar_data(prop, fields['atnum'], fields['nelec'])
+
+    # for key, value in fields.items():
+    #     if isinstance(value, np.ndarray):
+    #         print(f"{key}: shape={value.shape}, first 5 elements={value.flat[:5]}")
+    #     else:
+    #         print(f"{key}: {value}")
+
+    return fields
+
 
 
 def raw_datafile(
@@ -1021,3 +1080,5 @@ def raw_datafile(
         )
 
     return raw_file
+
+

@@ -43,7 +43,7 @@ NPOINTS = 10000
 # DATAPATH = os.path.abspath(DATAPATH._paths[0])
 
 @dataclass
-class SlaterDefinitionClass:
+class DefinitionClass:
     """Data structure for the Slater dataset."""
 
     #species info
@@ -1182,6 +1182,7 @@ def run(elem, charge, mult, nexc, dataset, datapath):
 
 
 
+
     # Get information about the element --> (dont forget) needs to be refactored
     atom = Element(elem)
     atmass = atom.mass
@@ -1196,6 +1197,7 @@ def run(elem, charge, mult, nexc, dataset, datapath):
 
 
 
+
     # Conceptual-DFT properties (WIP)
     ip = -mo_e_up[np.sum(occs_up) - 1]  # - energy of HOMO
     # ea = -mo_e_dn[np.sum(occs_dn)] if np.sum(occs_dn) < np.sum(occs_up) else None  # - LUMO energy
@@ -1203,7 +1205,7 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     eta = None
 
     # Return fields
-    fields = SlaterDefinitionClass(
+    fields = DefinitionClass(
         elem=elem,
         atnum=atnum,
         obasis_name="Slater",
