@@ -89,79 +89,79 @@ SLATER_PROPERTY_CONFIGS = [
     {
         'Carray_property': 'rs',
         'table_name': 'rs',
-        'folder':'radial_grid_folder',
+        'folder':'RadialGrid',
         'spins': 'no'
     },
     {
         'Carray_property': 'mo_dens_a',
         'table_name': 'mo_dens_a',
-        'folder': 'density_folder',
+        'folder': 'Density',
         'spins': 'yes'
     },
     {
         'Carray_property': 'mo_dens_b',
         'table_name': 'mo_dens_b',
-        'folder': 'density_folder',
+        'folder': 'Density',
         'spins': 'yes'
     },
     {
         'Carray_property': 'dens_tot',
         'table_name': 'dens_tot',
-        'folder': 'density_folder',
+        'folder': 'Density',
         'spins': 'no'
     },
     {
         'Carray_property': 'mo_d_dens_a',
         'table_name': 'mo_d_dens_a',
-        'folder': 'density_grad_folder',
+        'folder': 'DensityGradient',
         'spins': 'yes'
     },
     {
         'Carray_property': 'mo_d_dens_b',
         'table_name': 'mo_d_dens_b',
-        'folder': 'density_grad_folder',
+        'folder': 'DensityGradient',
         'spins': 'yes'
     },
     {
         'Carray_property': 'd_dens_tot',
         'table_name': 'd_dens_tot',
-        'folder': 'density_grad_folder',
+        'folder': 'DensityGradient',
         'spins': 'no'
     },
     {
         'Carray_property': 'mo_dd_dens_a',
         'table_name': 'mo_dd_dens_a',
-        'folder': 'density_laplacian_folder',
+        'folder': 'DensityLaplacian',
         'spins': 'yes'
     },
     {
         'Carray_property': 'mo_dd_dens_b',
         'table_name': 'mo_dd_dens_b',
-        'folder': 'density_laplacian_folder',
+        'folder': 'DensityLaplacian',
         'spins': 'yes'
     },
     {
         'Carray_property': 'dd_dens_tot',
         'table_name': 'dd_dens_tot',
-        'folder': 'density_laplacian_folder',
+        'folder': 'DensityLaplacian',
         'spins': 'no'
     },
     # {
     #     'Carray_property': 'mo_ked_a',
     #     'table_name': 'mo_ked_a',
-    #     'folder': 'KED_folder',
+    #     'folder': 'KineticEnergyDensity',
     #     'spins': 'yes'
     # },
     # {
     #     'Carray_property': 'mo_ked_b',
     #     'table_name': 'mo_ked_b',
-    #     'folder': 'KED_folder',
+    #     'folder': 'KineticEnergyDensity',
     #     'spins': 'yes'
     # },
     # {
     #     'Carray_property': 'ked_tot',
     #     'table_name': 'ked_tot',
-    #     'folder': 'KED_folder',
+    #     'folder': 'KineticEnergyDensity',
     #     'spins': 'no'
     # }
 
@@ -257,12 +257,12 @@ def create_hdf5_file(fields, dataset, elem, charge, mult, nexc):
 
 
         folders = {
-            'properties_folder': h5file.create_group(specific_elem_folder, 'Properties', 'Properties Data'),
-            'radial_grid_folder': h5file.create_group(specific_elem_folder, 'RadialGrid', 'Radial Grid Data'),
-            'density_folder': h5file.create_group(specific_elem_folder, 'Density', 'Density Data'),
-            'density_grad_folder': h5file.create_group(specific_elem_folder, 'DensityGradient', 'Density Gradient Data'),
-            'density_laplacian_folder': h5file.create_group(specific_elem_folder, 'DensityLaplacian', 'Density Laplacian Data'),
-            'KED_folder': h5file.create_group(specific_elem_folder, 'KineticEnergyDensity', 'Kinetic Energy Density Data'),
+            'Properties': h5file.create_group(specific_elem_folder, 'Properties', 'Properties Data'),
+            'RadialGrid': h5file.create_group(specific_elem_folder, 'RadialGrid', 'Radial Grid Data'),
+            'Density': h5file.create_group(specific_elem_folder, 'Density', 'Density Data'),
+            'DensityGradient': h5file.create_group(specific_elem_folder, 'DensityGradient', 'Density Gradient Data'),
+            'DensityLaplacian': h5file.create_group(specific_elem_folder, 'DensityLaplacian', 'Density Laplacian Data'),
+            'KineticEnergyDensity': h5file.create_group(specific_elem_folder, 'KineticEnergyDensity', 'Kinetic Energy Density Data'),
         }
 
         # Create basic property tables
