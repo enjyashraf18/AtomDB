@@ -26,11 +26,8 @@ from grid.rtransform import ExpRTransform
 # from importlib_resources import files
 from atomdb.utils import DEFAULT_DATAPATH
 from scipy.special import factorial
-import tables as pt
 from dataclasses import dataclass, field
 from typing import Optional, Dict
-
-
 
 __all__ = ["AtomicDensity", "load_slater_wfn", "run"]
 
@@ -1194,6 +1191,8 @@ def run(elem, charge, mult, nexc, dataset, datapath):
         cov_radius, vdw_radius, at_radius = (atom.cov_radius, atom.vdw_radius, atom.at_radius)
         polarizability = atom.pold
         dispersion = {"C6": atom.c6}
+
+
 
 
 
