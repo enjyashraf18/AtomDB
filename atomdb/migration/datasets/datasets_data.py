@@ -1,3 +1,7 @@
+"""
+running this file will recreate datasets_data.h5, that will lead to create an empty datasets folder once again
+"""
+
 from importlib_resources import files
 import tables as pt
 

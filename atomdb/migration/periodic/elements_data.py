@@ -14,6 +14,20 @@ data_info_csv = files("atomdb.data").joinpath("data_info.csv")
 hdf5_file = files("atomdb.data").joinpath("elements_data.h5")
 
 
+PROPERTY_NAME_MAP = {
+    "atmass": "atmass",
+    "cov_radius": "cov_radius",
+    "vdw_radius": "vdw_radius",
+    "at_radius": "at_radius",
+    "polarizability": "polarizability",
+    "dispersion_c6": "dispersion_c6",
+    "dispersion": "dispersion_c6",
+    "elem": "symbol",
+    "atnum": "atnum",
+    "name": "name",
+}
+
+
 # Properties of each element in the HDF5 file.
 PROPERTY_CONFIGS = [
     {
@@ -345,6 +359,21 @@ def write_data_info_to_hdf5(data_info_list):
             table_row['notes'] = row.get('Notes', '').encode('utf-8')
             table_row.append()
         property_info_table.flush()
+
+
+
+def map_element_symbol(ELEMENTS_H5FILE):
+    element_symbol_map = {}
+    for element_group in ELEMENTS_H5FILE.root.Elements:
+        symbol = element_group.symbol[0]['value'].decode('utf-8').strip()
+        atnum = element_group.atnum[0]['value']
+        name = element_group.name[0]['value'].decode('utf-8').strip()
+        element_symbol_map[symbol] = (atnum, name)
+
+    return element_symbol_map
+
+
+
 
 
 if __name__ == "__main__":
