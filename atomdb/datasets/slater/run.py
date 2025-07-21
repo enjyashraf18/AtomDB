@@ -19,15 +19,15 @@ import os
 import re
 import atomdb
 
-from atomdb.periodic import Element
 from grid.onedgrid import UniformInteger
 from grid.rtransform import ExpRTransform
 
 # from importlib_resources import files
 from atomdb.utils import DEFAULT_DATAPATH
 from scipy.special import factorial
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional, Dict
+from atomdb.periodic_test import element_symbol_map, get_scalar_data
 
 __all__ = ["AtomicDensity", "load_slater_wfn", "run"]
 
@@ -1123,7 +1123,7 @@ def run(elem, charge, mult, nexc, dataset, datapath):
 
     # Set up internal variables
     elem = atomdb.element_symbol(elem)
-    atnum = atomdb.element_number(elem)
+    atnum = element_symbol_map[elem][0]
     nelec = atnum - charge
     nspin = mult - 1
 
@@ -1177,23 +1177,13 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     mo_ked_a = species.eval_orbs_ked_positive_definite(rs)[:norba, :]
     mo_ked_b = species.eval_orbs_ked_positive_definite(rs)[:norba, :]
 
-
-
-
-    # Get information about the element --> (dont forget) needs to be refactored
-    atom = Element(elem)
-    atmass = atom.mass
-    cov_radius, vdw_radius, at_radius, polarizability, dispersion = [
-        None,
-    ] * 5
-    # overwrite values for neutral atomic species
-    if charge == 0:
-        cov_radius, vdw_radius, at_radius = (atom.cov_radius, atom.vdw_radius, atom.at_radius)
-        polarizability = atom.pold
-        dispersion = {"C6": atom.c6}
-
-
-
+    # Get periodic data
+    cov_radius = get_scalar_data('cov_radius', atnum, nelec)
+    vdw_radius = get_scalar_data('vdw_radius', atnum, nelec)
+    at_radius = get_scalar_data('at_radius', atnum, nelec)
+    polarizability = get_scalar_data('polarizability', atnum, nelec)
+    dispersion = get_scalar_data('dispersion', atnum, nelec)
+    atmass = get_scalar_data('atmass', atnum, nelec)
 
 
 
@@ -1211,12 +1201,12 @@ def run(elem, charge, mult, nexc, dataset, datapath):
         nelec=nelec,
         nspin=nspin,
         nexc=nexc,
-        atmass=atmass,  #
-        cov_radius=cov_radius,  #
-        vdw_radius=vdw_radius,  #
-        at_radius=at_radius,  #
-        polarizability=polarizability,  #
-        dispersion=dispersion,  #
+        atmass=atmass,
+        cov_radius=cov_radius,
+        vdw_radius=vdw_radius,
+        at_radius=at_radius,
+        polarizability=polarizability,
+        dispersion=dispersion,
         energy=energy,
         mo_energy_a=mo_e_up,
         mo_energy_b=mo_e_dn,

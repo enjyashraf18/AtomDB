@@ -24,27 +24,20 @@ from os import makedirs, path
 import numpy as np
 import pooch
 import requests
-from msgpack import packb, unpackb
-from msgpack_numpy import decode, encode
 from numpy import ndarray
 from scipy.interpolate import CubicSpline
 
-from atomdb.periodic import Element, element_symbol
+from atomdb.periodic_test import element_symbol_map, PROPERTY_NAME_MAP, get_scalar_data, ElementAttr
 from atomdb.utils import DEFAULT_DATAPATH, DEFAULT_DATASET, DEFAULT_REMOTE
 from importlib_resources import \
 files
 import tables as pt
 from numbers import Integral
-from migration.periodic.elements_data import PROPERTY_NAME_MAP, map_element_symbol
 
-elements_hdf5_file = files("atomdb.data").joinpath("elements_data.h5")
 datasets_hdf5_file = files("atomdb.data").joinpath("datasets_data.h5")
-
-
-ELEMENTS_H5FILE = pt.open_file(elements_hdf5_file, mode="r")
 DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="r")
 
-element_symbol_map = map_element_symbol(ELEMENTS_H5FILE)
+
 
 __all__ = [
     "Species",
@@ -89,41 +82,6 @@ def scalar(method):
     wrapper.__doc__ = method.__doc__
     return wrapper
 
-
-def get_scalar_data(prop_name, atnum, nelec):
-    charge = atnum - nelec
-
-    if charge != 0 and prop_name != "atmass":
-        return None
-
-    # get the element group
-    element_group = f"/Elements/{atnum:03d}"
-
-    table_name = PROPERTY_NAME_MAP[prop_name]
-    table_path = f"{element_group}/{table_name}"
-
-    # get the table node from the HDF5 file
-    table = ELEMENTS_H5FILE.get_node(table_path)
-
-    # Handle basic properties (single column --> no sources)
-    if len(table.colnames) == 1 and table.colnames[0] == "value":
-        value = table[0]["value"]
-        # if the value is an int, return it as an int
-        if isinstance(value, Integral):
-            return int(value)
-        # if the value is a string, decode from bytes
-        elif isinstance(value, bytes):
-            return value.decode("utf-8")
-    else:
-        # handle properties with multiple sources
-        result = {}
-        for row in table:
-            source = row["source"].decode("utf-8")
-            value = row["value"]
-            # exclude none values
-            if not np.isnan(value):
-                result[source] = float(value)
-        return result if result else None
 
 
 def _remove_suffix(input_string, suffix):
@@ -781,19 +739,19 @@ def compile_species(
     fields = submodule.run(elem, charge, mult, nexc, dataset, datapath)
 
     # dump the data to the HDF5 file
-    dump(fields, dataset, elem, charge, mult, nexc)
+    # dump(fields, dataset, elem, charge, mult, nexc)
 
 
-    # fields = asdict(fields)
-    # # print all fields
-    # for key, value in fields.items():
-    #     if isinstance(value, np.ndarray):
-    #         print(f"{key}: shape={value.shape}, first 5 elements={value.flat[:5]}")
-    #     else:
-    #         print(f"{key}: {value}")
-    #
-    # species = Species(dataset, fields)
-    # return species
+    fields = asdict(fields)
+    # print all fields
+    for key, value in fields.items():
+        if isinstance(value, np.ndarray):
+            print(f"{key}: shape={value.shape}, first 5 elements={value.flat[:5]}")
+        else:
+            print(f"{key}: {value}")
+
+    species = Species(dataset, fields)
+    return species
 
 
 
@@ -1014,7 +972,8 @@ def get_species_data(folder_path, elem, DATASET_PROPERTY_CONFIGS):
             fields[config['Carray_property']] = table[:]
 
 
-    fields['atnum'] = element_symbol_map[elem][0]
+    fields['atnum'] = element_symbol_map[elem][ElementAttr.atnum]
+
 
     # Add scalar properties
     for prop in ('atmass', 'cov_radius', 'vdw_radius', 'at_radius', 'polarizability', 'dispersion'):
@@ -1063,7 +1022,8 @@ def raw_datafile(
     str
         Path to the raw data file.
     """
-    elem = "*" if elem is Ellipsis else element_symbol(elem)
+    # elem = "*" if elem is Ellipsis else element_symbol(elem) --> why using element_symbol here
+    elem = "*" if elem is Ellipsis else elem
     charge = "*" if charge is Ellipsis else f"{charge:03d}"
     mult = "*" if mult is Ellipsis else f"{mult:03d}"
     nexc = "*" if nexc is Ellipsis else f"{nexc:03d}"
