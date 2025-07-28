@@ -3,13 +3,14 @@ import numpy as np
 from importlib_resources import files
 import tables as pt
 from dataclasses import asdict
+from atomdb.datasets.slater.run import NPOINTS
+from atomdb.periodic_test import element_symbol_map, get_scalar_data, ElementAttr
+
 
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings('ignore', category=pt.NaturalNameWarning)
 
-
 max_norba = 30 # needs to be calculated
-hdf5_file = files("atomdb.data").joinpath("datasets_data.h5")
 
 SLATER_PROPERTY_CONFIGS = [
     {
@@ -28,6 +29,12 @@ SLATER_PROPERTY_CONFIGS = [
         'property': 'nexc',
         'table_name': 'nexc',
         'description': 'Number of excitations',
+        'type': 'int',
+    },
+    {
+        'property': 'nbasis',
+        'table_name': 'nbasis',
+        'description': 'Number of basis functions',
         'type': 'int',
     },
     {
@@ -167,7 +174,6 @@ SLATER_PROPERTY_CONFIGS = [
 
 ]
 
-
 class IntPropertyDescription(pt.IsDescription):
     value = pt.Int32Col()
 
@@ -183,6 +189,19 @@ class ArrayPropertyDescription(pt.IsDescription):
 
 
 def create_properties_tables(hdf5_file, parent_folder, config, value):
+    """Creates a table for storing properties in the HDF5 file.
+
+    Args:
+        hdf5_file (tables.File): The open HDF5 file where the table will be created.
+        parent_folder (tables.Group): The parent folder in the HDF5 file where the table will be stored.
+        config (dict): Configuration dictionary containing table metadata, including:
+            - 'table_name': Name of the table.
+            - 'description': Description of the table.
+            - 'type': Data type of the property ('int', 'string', or 'float').
+        value: The value to store in the table.
+    """
+
+    # Extract table metadata from config.
     table_name = config["table_name"]
     table_description = config["description"]
     type = config["type"]
@@ -199,6 +218,7 @@ def create_properties_tables(hdf5_file, parent_folder, config, value):
         row_description = FloatPropertyDescription
         value = float(value) if value is not None else np.nan
 
+    # Create the table and populate the data
     table = hdf5_file.create_table(parent_folder, table_name, row_description, table_description)
     row = table.row
     row['value'] = value
@@ -206,6 +226,17 @@ def create_properties_tables(hdf5_file, parent_folder, config, value):
     table.flush()
 
 def create_properties_arrays(hdf5_file, parent_folder, table_name, description, data):
+    """Creates a table for storing an array property in the HDF5 file.
+
+    Args:
+        hdf5_file (tables.File): The open HDF5 file where the array will be created.
+        parent_folder (tables.Group): The parent folder in the HDF5 file where the table will be stored.
+        table_name (str): Name of the table to create.
+        description (str): Description of the table.
+        data (numpy.ndarray): The array data to store in the table.
+    """
+
+    # Create the table and populate the data
     table = hdf5_file.create_table(parent_folder, table_name, ArrayPropertyDescription, description)
     row = table.row
     padded_data = np.pad(data, (0, max_norba - len(data)), 'constant', constant_values=0)
@@ -213,78 +244,109 @@ def create_properties_arrays(hdf5_file, parent_folder, table_name, description, 
     row.append()
     table.flush()
 
-
-
 def create_spins_array(h5file, parent_folder, key, array_data, shape):
+    """Creates a  CArray for storing spin-dependent array data in the HDF5 file.
+
+    Args:
+        hdf5_file (tables.File): The open HDF5 file where the CArray will be created.
+    parent_folder (tables.Group): The parent folder in the HDF5 file where the CArray will be stored.
+        key (str): Name of the CArray.
+        array_data (numpy.ndarray): The array data to store in the CArray.
+        shape (int): The total size of the CArray.
+    """
     data_length = len(array_data)
 
+    # Create the CArray and populate the data
     array = h5file.create_carray(parent_folder, key, pt.Float64Atom(), shape=(shape,))
-
     array[:data_length] = array_data
     array[data_length:] = 0
 
-
 def create_tot_array(h5file, parent_folder, key, array_data):
-    tot_gradient_array = h5file.create_carray(parent_folder, key, pt.Float64Atom(), shape=(10000,))
+    """Creates a CArray for storing total (non-spin-dependent) array data in the HDF5 file.
+
+    Args:
+        h5file (tables.File): The open HDF5 file where the CArray will be created.
+        parent_folder (tables.Group): The parent folder in the HDF5 file where the CArray will be stored.
+        key (str): Name of the CArray.
+        array_data (numpy.ndarray): The array data to store in the CArray.
+    """
+
+    # Create the CArray and populate the data
+    tot_gradient_array = h5file.create_carray(parent_folder, key, pt.Float64Atom(), shape=(NPOINTS,))
     tot_gradient_array[:] = array_data
 
+def create_hdf5_file(DATASETS_H5FILE, fields, dataset):
+    """Creates an HDF5 folder with structured data for a specific dataset and element.
 
-
-def create_hdf5_file(fields, dataset, elem, charge, mult, nexc):
+    Args:
+        fields (dataclass): A dataclass containing the fields to store in the HDF5 file.
+        dataset (str): Name of the dataset.
+        elem (str): Element symbol.
+        charge (int): Charge of the system.
+        mult (int): Multiplicity of the system.
+        nexc (int): Number of excitations.
+    """
     fields = asdict(fields)
     dataset = dataset.lower()
-    shape = 10000 * max_norba
+    shape = NPOINTS * max_norba
+
+    elem = fields['elem']
+    nexc = fields['nexc']
+    atnum = element_symbol_map[elem][ElementAttr.atnum]
+    mult = get_scalar_data('mult', atnum, fields['nelec'])
+    charge = atnum - fields['nelec']
 
     # charge and mult can be calculated (instead of passing them)?
-    with pt.open_file(hdf5_file, "a") as h5file:
+    dataset_folder = f"/Datasets/{dataset}"
+    elem_folder = f"{dataset_folder}/{elem}"
+    specific_elem_folder = f"{elem_folder}/{elem}_{charge:03d}_{mult:03d}_{nexc:03d}"
 
-        dataset_folder = f"/Datasets/{dataset}"
-        elem_folder = f"{dataset_folder}/{elem}"
-        specific_elem_folder = f"{elem_folder}/{elem}_{charge:03d}_{mult:03d}_{nexc:03d}"
+    # Create dataset folder if it doesn't exist
+    if dataset_folder not in DATASETS_H5FILE:
+        DATASETS_H5FILE.create_group("/Datasets", dataset, f"{dataset} Data")
 
-        # Create dataset folder if it doesn't exist
-        if dataset_folder not in h5file:
-            h5file.create_group("/Datasets", dataset, f"{dataset} Data")
+    # Create element folder if it doesn't exist
+    if elem_folder not in DATASETS_H5FILE:
+        DATASETS_H5FILE.create_group(dataset_folder, elem, f"{elem} Data")
 
-        # Create element folder if it doesn't exist
-        if elem_folder not in h5file:
-            h5file.create_group(dataset_folder, elem, f"{elem} Data")
+    # Create specific element folder (charge/mult/nexc) if it doesn't exist
+    if specific_elem_folder not in DATASETS_H5FILE:
+        DATASETS_H5FILE.create_group(elem_folder, f"{elem}_{charge:03d}_{mult:03d}_{nexc:03d}",
+                            f"{elem} {charge} {mult} {nexc} Data")
 
-        # Create specific element folder (charge/mult/nexc) if it doesn't exist
-        if specific_elem_folder not in h5file:
-            h5file.create_group(elem_folder, f"{elem}_{charge:03d}_{mult:03d}_{nexc:03d}",
-                                f"{elem} {charge} {mult} {nexc} Data")
+    folders = {
+        'Properties': DATASETS_H5FILE.create_group(specific_elem_folder, 'Properties', 'Properties Data'),
+        'RadialGrid': DATASETS_H5FILE.create_group(specific_elem_folder, 'RadialGrid', 'Radial Grid Data'),
+        'Density': DATASETS_H5FILE.create_group(specific_elem_folder, 'Density', 'Density Data'),
+        'DensityGradient': DATASETS_H5FILE.create_group(specific_elem_folder, 'DensityGradient',
+                                               'Density Gradient Data'),
+        'DensityLaplacian': DATASETS_H5FILE.create_group(specific_elem_folder, 'DensityLaplacian',
+                                                'Density Laplacian Data'),
+        'KineticEnergyDensity': DATASETS_H5FILE.create_group(specific_elem_folder, 'KineticEnergyDensity',
+                                                    'Kinetic Energy Density Data'),
+    }
 
+    # Create basic property tables
+    for config in SLATER_PROPERTY_CONFIGS:
+        if 'property' in config:
+            prop_name = config['property']
+            create_properties_tables(
+                DATASETS_H5FILE, folders['Properties'], config, fields[prop_name]
+            )
 
-        folders = {
-            'Properties': h5file.create_group(specific_elem_folder, 'Properties', 'Properties Data'),
-            'RadialGrid': h5file.create_group(specific_elem_folder, 'RadialGrid', 'Radial Grid Data'),
-            'Density': h5file.create_group(specific_elem_folder, 'Density', 'Density Data'),
-            'DensityGradient': h5file.create_group(specific_elem_folder, 'DensityGradient', 'Density Gradient Data'),
-            'DensityLaplacian': h5file.create_group(specific_elem_folder, 'DensityLaplacian', 'Density Laplacian Data'),
-            'KineticEnergyDensity': h5file.create_group(specific_elem_folder, 'KineticEnergyDensity', 'Kinetic Energy Density Data'),
-        }
+        # Create array property tables
+        elif 'array_property' in config:
+            prop_name = config['array_property']
+            create_properties_arrays(DATASETS_H5FILE, folders['Properties'], config['table_name'],
+                                     config['description'], fields[prop_name])
 
-        # Create basic property tables
-        for config in SLATER_PROPERTY_CONFIGS:
-            if 'property' in config:
-                prop_name = config['property']
-                create_properties_tables(
-                    h5file, folders['properties_folder'], config, fields[prop_name]
-                )
-
-            # Create array property tables
-            elif 'array_property' in config:
-                prop_name = config['array_property']
-                create_properties_arrays(h5file, folders['properties_folder'], config['table_name'], config['description'], fields[prop_name])
-
-            elif 'Carray_property' in config:
-                prop_name = config['Carray_property']
-                parent_folder = folders[config['folder']]
-                print(prop_name)
-                if config['spins'] == 'yes':
-                    create_spins_array(h5file, parent_folder, config['table_name'], fields[prop_name], shape)
-                elif config['spins'] == 'no':
-                    create_tot_array(h5file, parent_folder, config['table_name'], fields[prop_name])
+        elif 'Carray_property' in config:
+            prop_name = config['Carray_property']
+            parent_folder = folders[config['folder']]
+            if config['spins'] == 'yes':
+                create_spins_array(DATASETS_H5FILE, parent_folder, config['table_name'], fields[prop_name],
+                                   shape)
+            elif config['spins'] == 'no':
+                create_tot_array(DATASETS_H5FILE, parent_folder, config['table_name'], fields[prop_name])
 
 
