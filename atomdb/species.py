@@ -34,8 +34,8 @@ files
 import tables as pt
 from numbers import Integral
 
-datasets_hdf5_file = files("atomdb.data").joinpath("datasets_data.h5")
-DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="r")
+datasets_hdf5_file = files("atomdb.datasets").joinpath("datasets_data.h5")
+DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
 
 
 
@@ -730,32 +730,15 @@ def compile_species(
         Path to the local AtomDB cache, by default DEFAULT_DATAPATH variable value.
 
     """
-    # Ensure directories exist
-    makedirs(path.join(datapath, dataset.lower(), "db"), exist_ok=True)
-    makedirs(path.join(datapath, dataset.lower(), "raw"), exist_ok=True)
-
     # import the selected dataset compile script and get fields
     submodule = import_module(f"atomdb.datasets.{dataset}.run")
     fields = submodule.run(elem, charge, mult, nexc, dataset, datapath)
 
     # dump the data to the HDF5 file
-    # dump(fields, dataset, elem, charge, mult, nexc)
+    dump(fields, dataset)
 
 
-    fields = asdict(fields)
-    # print all fields
-    for key, value in fields.items():
-        if isinstance(value, np.ndarray):
-            print(f"{key}: shape={value.shape}, first 5 elements={value.flat[:5]}")
-        else:
-            print(f"{key}: {value}")
-
-    species = Species(dataset, fields)
-    return species
-
-
-
-def dump(fields, dataset, elem, charge, mult, nexc):
+def dump(fields, dataset):
     r"""Dump the compiled species data to an HDF5 file in the AtomDB database.
 
     Parameters
@@ -776,7 +759,7 @@ def dump(fields, dataset, elem, charge, mult, nexc):
 
     # Save data to the HDF5 file
     element_folder_creator = import_module(f"atomdb.datasets.{dataset}.h5file_creator")
-    element_folder_creator.create_hdf5_file(fields, dataset, elem, charge, mult, nexc)
+    element_folder_creator.create_hdf5_file(DATASETS_H5FILE, fields, dataset)
 
 
 def load(
@@ -820,7 +803,6 @@ def load(
     dataset_submodule = import_module(f"atomdb.datasets.{dataset}.h5file_creator")
     DATASET_PROPERTY_CONFIGS = getattr(dataset_submodule, f"{dataset.upper()}_PROPERTY_CONFIGS")
 
-
     # Handle wildcard case for loading multiple species
     if Ellipsis in (elem, charge, mult, nexc):
         data_paths = datafile(elem, charge, mult, nexc=nexc, dataset=dataset)
@@ -834,7 +816,6 @@ def load(
     else:
         # Construct the specific data path for a single species
         data_path = f"{dataset_path}/{elem}/{elem}_{charge:03d}_{mult:03d}_{nexc:03d}"
-
         # get the species data and then create a species object
         fields = get_species_data(data_path, elem, DATASET_PROPERTY_CONFIGS)
         obj = Species(dataset, fields)
@@ -876,7 +857,6 @@ def datafile(
         paths to the database file of a species in AtomDB.
 
     """
-
     group_paths = []
     # Access the dataset folder in the HDF5 file
     dataset_path = f"/Datasets/{dataset}"
@@ -959,21 +939,17 @@ def get_species_data(folder_path, elem, DATASET_PROPERTY_CONFIGS):
                 value = value.decode('utf-8')
             fields[config["property"]] = value
 
-
         elif 'array_property' in config:
             # Extract array properties
             table = dataset_folder.Properties._f_get_child(config['table_name'])
             fields[config["array_property"]] = table[0]['value']
-
 
         elif 'Carray_property' in config:
             # Extract Carray properties
             table = dataset_folder._f_get_child(config['folder'])._f_get_child(config['table_name'])
             fields[config['Carray_property']] = table[:]
 
-
     fields['atnum'] = element_symbol_map[elem][ElementAttr.atnum]
-
 
     # Add scalar properties
     for prop in ('atmass', 'cov_radius', 'vdw_radius', 'at_radius', 'polarizability', 'dispersion'):

@@ -6,7 +6,7 @@ from importlib_resources import files
 import tables as pt
 
 
-hdf5_file = files("atomdb.data").joinpath("datasets_data.h5")
+hdf5_file = files("atomdb.datasets").joinpath("datasets_data.h5")
 
 
 with pt.open_file(hdf5_file, mode='w', title="Datasets Data Files") as h5file:

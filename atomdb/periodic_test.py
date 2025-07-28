@@ -31,6 +31,7 @@ PROPERTY_NAME_MAP = {
     "elem": "symbol",
     "atnum": "atnum",
     "name": "name",
+    "mult": "mult",
 }
 
 def get_scalar_data(prop_name, atnum, nelec):

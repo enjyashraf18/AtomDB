@@ -49,6 +49,7 @@ class DefinitionClass:
     nelec: int
     nspin: int
     nexc: int
+    nbasis: int
     obasis_name: str
 
     # properties (all from multiple sources Dict[str, float] )
@@ -68,7 +69,6 @@ class DefinitionClass:
     # [np.ndarray]
     mo_energy_a: Optional[np.ndarray]
     mo_energy_b:  Optional[np.ndarray]
-
     mo_occs_a: Optional[np.ndarray]
     mo_occs_b: Optional[np.ndarray]
 
@@ -1144,6 +1144,8 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     # Get electronic structure data
     energy = species.energy[0]  # get energy from list
     norba = len(mo_occ) // 2
+    nbasis = norba
+
     # Get MO energies and occupations
     mo_e_up = species.orbitals_energy.ravel()[:norba]
     mo_e_dn = species.orbitals_energy.ravel()[norba:]
@@ -1197,6 +1199,7 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     fields = DefinitionClass(
         elem=elem,
         atnum=atnum,
+        nbasis = norba,
         obasis_name="Slater",
         nelec=nelec,
         nspin=nspin,
