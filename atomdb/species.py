@@ -29,14 +29,12 @@ from scipy.interpolate import CubicSpline
 
 from atomdb.periodic_test import element_symbol_map, PROPERTY_NAME_MAP, get_scalar_data, ElementAttr
 from atomdb.utils import DEFAULT_DATAPATH, DEFAULT_DATASET, DEFAULT_REMOTE
-from importlib_resources import \
-files
+from importlib_resources import files
 import tables as pt
 from numbers import Integral
 
 datasets_hdf5_file = files("atomdb.datasets").joinpath("datasets_data.h5")
 DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
-
 
 
 __all__ = [
@@ -79,9 +77,9 @@ def scalar(method):
             return getattr(self._data, name)
 
         get_scalar_data(name, self._data.atnum, self._data.nelec)
+
     wrapper.__doc__ = method.__doc__
     return wrapper
-
 
 
 def _remove_suffix(input_string, suffix):
@@ -191,7 +189,7 @@ class DensitySpline:
         else:
             y = self._obj(x, nu=deriv)
         # Handle errors from the y = exp(log y) operation -- set NaN to zero
-        np.nan_to_num(y, nan=0., copy=False)
+        np.nan_to_num(y, nan=0.0, copy=False)
         # Cutoff value: assume y(x) is zero where x > final given point x_n
         y[x > self._obj.x[-1]] = 0
         return y
@@ -668,7 +666,7 @@ class Species:
         # Define the Laplacian function
         def densityspline_like_func(rs):
             # Avoid division by zero and handle small values of r
-            with np.errstate(divide='ignore'):
+            with np.errstate(divide="ignore"):
                 laplacian = dd_dens_spline(rs) + 2 * d_dens_sp_spline(rs) / rs
                 laplacian = np.where(rs < 1e-10, 0.0, laplacian)
             return laplacian
@@ -858,57 +856,42 @@ def datafile(
 
     """
     group_paths = []
+    conditions = []
+
     # Access the dataset folder in the HDF5 file
     dataset_path = f"/Datasets/{dataset}"
     dataset_folder = DATASETS_H5FILE.get_node(dataset_path)
 
-    # Case #1: specific element provided
     if elem is not Ellipsis:
-        elem_folder = dataset_folder._f_get_child(elem)
+        conditions.append(f'(elem == b"{elem}")')  # b for bytes comparison
+    if charge is not Ellipsis:
+        conditions.append(f"(charge == {charge})")
+    if mult is not Ellipsis:
+        conditions.append(f"(mult == {mult})")
+    if nexc is not Ellipsis:
+        conditions.append(f"(nexc == {nexc})")
 
-        # Iterate through species folders to find matches
-        for species_folder in elem_folder._v_groups:
-            if _matches(species_folder, charge, mult, nexc):
-                group_paths.append(f"{dataset_path}/{elem}/{species_folder}")
-        return group_paths
+    if conditions:
+        query_result = " & ".join(conditions) if conditions else None
 
-    # Case #2: wildcard element (Ellipsis)
-    for elem, elem_folder in dataset_folder._v_groups.items():
-        # Iterate through all species folders for each element
-        for species_folder in elem_folder._v_groups:
-            if _matches(species_folder, charge, mult, nexc):
+        for elem, elem_folder in dataset_folder._v_groups.items():
+            for species_folder in elem_folder._v_groups:
+                properties_folder = DATASETS_H5FILE.get_node(
+                    f"/Datasets/{dataset}/{elem}/{species_folder}/Properties"
+                )
+                species_info_table = properties_folder._f_get_child("species_info")
+
+                matched_species = list(species_info_table.where(query_result))
+                if matched_species:
+                    group_paths.append(f"{dataset_path}/{elem}/{species_folder}")
+
+    # if there are no conditions, return all species
+    else:
+        for elem, elem_folder in dataset_folder._v_groups.items():
+            for species_folder in elem_folder._v_groups:
                 group_paths.append(f"{dataset_path}/{elem}/{species_folder}")
 
     return group_paths
-
-
-def _matches(element_folder_name, charge, mult, nexc):
-    r"""helper to check if a species folder matches the specified charge, mult, nexc.
-
-    Parameters
-    ----------
-    element_folder_name : str
-        Name of the species folder in the format '<elem>_<charge>_<mult>_<nexc>'.
-    charge : int or Ellipsis
-        Ionic charge to match or Ellipsis for wildcard.
-    mult : int or Ellipsis
-        Spin multiplicity to match or Ellipsis for wildcard.
-    nexc : int or Ellipsis
-        Excitation level to match or Ellipsis for wildcard.
-
-    Returns
-    -------
-    bool
-        True if the folder matches, False otherwise.
-    """
-
-    # extract species attributes
-    _, extracted_charge, extracted_mult, extracted_nexc = element_folder_name.split("_")
-    return (
-    (charge is Ellipsis or int(extracted_charge) == charge) and
-    (mult is Ellipsis or int(extracted_mult) == mult) and
-    (nexc is Ellipsis or int(extracted_nexc) == nexc)
-    )
 
 
 def get_species_data(folder_path, elem, DATASET_PROPERTY_CONFIGS):
@@ -929,34 +912,44 @@ def get_species_data(folder_path, elem, DATASET_PROPERTY_CONFIGS):
     fields = {}
     dataset_folder = DATASETS_H5FILE.get_node(folder_path)
 
+    species_info_table = dataset_folder.Properties._f_get_child("species_info")
+    species_info_row = species_info_table[0]
+
     # Iterate through property configurations to extract data from datasets_data.h5
     for config in DATASET_PROPERTY_CONFIGS:
-        if 'property' in config:
+        if "SpeciesInfo" in config:
+            # Extract species info data
+            prop_name = config["SpeciesInfo"]
+            value = species_info_row[prop_name]
+            if config["type"] == "string":
+                value = value.decode("utf-8")
+            fields[config["SpeciesInfo"]] = value
+
+        elif "property" in config:
             # Extract single value properties
-            table = dataset_folder.Properties._f_get_child(config['table_name'])
-            value = table[0]['value']
-            if config['type'] == 'string':
-                value = value.decode('utf-8')
+            table = dataset_folder.Properties._f_get_child(config["table_name"])
+            value = table[0]["value"]
+            if config["type"] == "string":
+                value = value.decode("utf-8")
             fields[config["property"]] = value
 
-        elif 'array_property' in config:
+        elif "array_property" in config:
             # Extract array properties
-            table = dataset_folder.Properties._f_get_child(config['table_name'])
-            fields[config["array_property"]] = table[0]['value']
+            table = dataset_folder.Properties._f_get_child(config["table_name"])
+            fields[config["array_property"]] = table[0]["value"]
 
-        elif 'Carray_property' in config:
+        elif "Carray_property" in config:
             # Extract Carray properties
-            table = dataset_folder._f_get_child(config['folder'])._f_get_child(config['table_name'])
-            fields[config['Carray_property']] = table[:]
+            table = dataset_folder._f_get_child(config["folder"])._f_get_child(config["table_name"])
+            fields[config["Carray_property"]] = table[:]
 
-    fields['atnum'] = element_symbol_map[elem][ElementAttr.atnum]
+    fields["atnum"] = element_symbol_map[elem][ElementAttr.atnum]
 
     # Add scalar properties
-    for prop in ('atmass', 'cov_radius', 'vdw_radius', 'at_radius', 'polarizability', 'dispersion'):
-        fields[prop] = get_scalar_data(prop, fields['atnum'], fields['nelec'])
+    for prop in ("atmass", "cov_radius", "vdw_radius", "at_radius", "polarizability", "dispersion"):
+        fields[prop] = get_scalar_data(prop, fields["atnum"], fields["nelec"])
 
     return fields
-
 
 
 def raw_datafile(
@@ -1019,5 +1012,3 @@ def raw_datafile(
         )
 
     return raw_file
-
-

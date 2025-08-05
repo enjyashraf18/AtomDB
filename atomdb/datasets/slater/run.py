@@ -39,17 +39,20 @@ NPOINTS = 10000
 # DATAPATH = files("atomdb.datasets.slater.raw")
 # DATAPATH = os.path.abspath(DATAPATH._paths[0])
 
+
 @dataclass
 class DefinitionClass:
     """Data structure for the Slater dataset."""
 
-    #species info
+    # species info
     elem: str
     atnum: int
     nelec: int
     nspin: int
     nexc: int
     nbasis: int
+    charge: int
+    mult: int
     obasis_name: str
 
     # properties (all from multiple sources Dict[str, float] )
@@ -68,7 +71,7 @@ class DefinitionClass:
 
     # [np.ndarray]
     mo_energy_a: Optional[np.ndarray]
-    mo_energy_b:  Optional[np.ndarray]
+    mo_energy_b: Optional[np.ndarray]
     mo_occs_a: Optional[np.ndarray]
     mo_occs_b: Optional[np.ndarray]
 
@@ -94,6 +97,7 @@ class DefinitionClass:
     mo_ked_a: np.ndarray = Optional[np.ndarray]
     mo_ked_b: np.ndarray = Optional[np.ndarray]
     ked_tot: np.ndarray = Optional[np.ndarray]
+
 
 class AtomicDensity:
     r"""
@@ -1180,14 +1184,12 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     mo_ked_b = species.eval_orbs_ked_positive_definite(rs)[:norba, :]
 
     # Get periodic data
-    cov_radius = get_scalar_data('cov_radius', atnum, nelec)
-    vdw_radius = get_scalar_data('vdw_radius', atnum, nelec)
-    at_radius = get_scalar_data('at_radius', atnum, nelec)
-    polarizability = get_scalar_data('polarizability', atnum, nelec)
-    dispersion = get_scalar_data('dispersion', atnum, nelec)
-    atmass = get_scalar_data('atmass', atnum, nelec)
-
-
+    cov_radius = get_scalar_data("cov_radius", atnum, nelec)
+    vdw_radius = get_scalar_data("vdw_radius", atnum, nelec)
+    at_radius = get_scalar_data("at_radius", atnum, nelec)
+    polarizability = get_scalar_data("polarizability", atnum, nelec)
+    dispersion = get_scalar_data("dispersion", atnum, nelec)
+    atmass = get_scalar_data("atmass", atnum, nelec)
 
     # Conceptual-DFT properties (WIP)
     ip = -mo_e_up[np.sum(occs_up) - 1]  # - energy of HOMO
@@ -1198,8 +1200,10 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     # Return fields
     fields = DefinitionClass(
         elem=elem,
+        charge=charge,
+        mult=mult,
         atnum=atnum,
-        nbasis = norba,
+        nbasis=norba,
         obasis_name="Slater",
         nelec=nelec,
         nspin=nspin,
@@ -1235,7 +1239,5 @@ def run(elem, charge, mult, nexc, dataset, datapath):
         mo_ked_a=mo_ked_a.flatten(),
         mo_ked_b=mo_ked_b.flatten(),
         ked_tot=ked_tot,
-
     )
     return fields
-

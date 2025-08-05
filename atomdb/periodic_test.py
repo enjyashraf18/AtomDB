@@ -12,6 +12,7 @@ __all__ = [
     "ElementAttr",
 ]
 
+
 class ElementAttr(IntEnum):
     atnum = 0
     name = 1
@@ -27,12 +28,13 @@ PROPERTY_NAME_MAP = {
     "at_radius": "at_radius",
     "polarizability": "polarizability",
     "dispersion_c6": "dispersion_c6",
-    "dispersion": "dispersion_c6", #fields in run
+    "dispersion": "dispersion_c6",  # fields in run
     "elem": "symbol",
     "atnum": "atnum",
     "name": "name",
     "mult": "mult",
 }
+
 
 def get_scalar_data(prop_name, atnum, nelec):
     charge = atnum - nelec
@@ -70,13 +72,12 @@ def get_scalar_data(prop_name, atnum, nelec):
         return result if result else None
 
 
-
 def map_element_symbol():
     element_symbol_map = {}
     for element_group in ELEMENTS_H5FILE.root.Elements:
-        symbol = element_group.symbol[0]['value'].decode('utf-8').strip()
-        atnum = element_group.atnum[0]['value']
-        name = element_group.name[0]['value'].decode('utf-8').strip()
+        symbol = element_group.symbol[0]["value"].decode("utf-8").strip()
+        atnum = element_group.atnum[0]["value"]
+        name = element_group.name[0]["value"].decode("utf-8").strip()
         element_symbol_map[symbol] = (atnum, name)
 
     return element_symbol_map
