@@ -37,6 +37,21 @@ PROPERTY_NAME_MAP = {
 
 
 def get_scalar_data(prop_name, atnum, nelec):
+    """
+    Get a scalar property value for a given element.
+
+    Args:
+        prop_name (str): Property name to retrieve.
+        atnum (int): Atomic number of the element.
+        nelec (int): Number of electrons in the element.
+
+    Returns:
+        int | float | str | dict[str, float] | None:
+            - int, float, or str for single-valued properties.
+            - dict for properties with multiple sources.
+            - None
+    """
+
     charge = atnum - nelec
 
     if charge != 0 and prop_name not in ["atmass", "elem", "atnum", "name"]:
@@ -73,6 +88,13 @@ def get_scalar_data(prop_name, atnum, nelec):
 
 
 def map_element_symbol():
+    """
+    Build a mapping of element symbols to their atomic number and name.
+
+    Returns:
+        dict[str, tuple[int, str]]:
+            Dictionary mapping element symbol → (atomic_number, name).
+    """
     element_symbol_map = {}
     for element_group in ELEMENTS_H5FILE.root.Elements:
         symbol = element_group.symbol[0]["value"].decode("utf-8").strip()

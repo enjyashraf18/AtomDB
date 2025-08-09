@@ -733,31 +733,22 @@ def compile_species(
     fields = submodule.run(elem, charge, mult, nexc, dataset, datapath)
 
     # dump the data to the HDF5 file
-    dump(fields, dataset)
+    dump(fields, dataset, mult)
 
 
-def dump(fields, dataset):
+def dump(fields, dataset, mult):
     r"""Dump the compiled species data to an HDF5 file in the AtomDB database.
 
     Parameters
     ----------
-    fields : dict
-        Dictionary containing the compiled data fields for the species.
-    dataset : str
-        Name of the dataset selected.
-    elem : str
-        Element symbol.
-    charge : int
-        Charge.
-    mult : int
-        Multiplicity.
-    nexc : int, optional
-        Excitation level, by default 0.
+    fields (dataclass): A dataclass containing the fields to store in the HDF5 file.
+    dataset (str): Name of the dataset.
+    mult (int): Multiplicity.
     """
 
     # Save data to the HDF5 file
     element_folder_creator = import_module(f"atomdb.datasets.{dataset}.h5file_creator")
-    element_folder_creator.create_hdf5_file(DATASETS_H5FILE, fields, dataset)
+    element_folder_creator.create_hdf5_file(DATASETS_H5FILE, fields, dataset, mult)
 
 
 def load(
@@ -851,7 +842,7 @@ def datafile(
 
     Returns
     -------
-    str
+    list
         paths to the database file of a species in AtomDB.
 
     """
@@ -901,6 +892,8 @@ def get_species_data(folder_path, elem, DATASET_PROPERTY_CONFIGS):
     ----------
     folder_path : str
         Path to the HDF5 folder containing the species data.
+    elem : str
+        Element symbol.
     DATASET_PROPERTY_CONFIGS : list
         list of configuration dictionaries.
 
