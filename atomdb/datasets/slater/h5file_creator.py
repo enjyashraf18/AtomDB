@@ -10,51 +10,51 @@ from atomdb.periodic_test import element_symbol_map, get_scalar_data, ElementAtt
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings("ignore", category=pt.NaturalNameWarning)
 
-max_norba = 30  # needs to be calculated
+max_norba = 56
 
 SLATER_PROPERTY_CONFIGS = [
     {
-        "SpeciesInfo": "elem",  #
+        "SpeciesInfo": "elem",
         "type": "string",
     },
     {
-        "SpeciesInfo": "nexc",  #
+        "SpeciesInfo": "nexc",
         "type": "int",
     },
     {
-        "SpeciesInfo": "charge",  #
+        "SpeciesInfo": "charge",
         "type": "int",
     },
     {
-        "SpeciesInfo": "mult",  #
+        "SpeciesInfo": "mult",
         "type": "int",
     },
     {
-        "SpeciesInfo": "nelec",  #
+        "SpeciesInfo": "nelec",
         "type": "int",
     },
     {
-        "SpeciesInfo": "nspin",  #
+        "SpeciesInfo": "nspin",
         "type": "int",
     },
     {
-        "SpeciesInfo": "energy",  #
+        "SpeciesInfo": "energy",
         "type": "float",
     },
     {
-        "SpeciesInfo": "ip",  #
+        "SpeciesInfo": "ip",
         "type": "float",
     },
     {
-        "SpeciesInfo": "mu",  #
+        "SpeciesInfo": "mu",
         "type": "float",
     },
     {
-        "SpeciesInfo": "eta",  #
+        "SpeciesInfo": "eta",
         "type": "float",
     },
     {
-        "SpeciesInfo": "nbasis",  #
+        "SpeciesInfo": "nbasis",
         "type": "int",
     },
     {
@@ -133,24 +133,24 @@ SLATER_PROPERTY_CONFIGS = [
         "folder": "DensityLaplacian",
         "spins": "no",
     },
-    # {
-    #     'Carray_property': 'mo_ked_a',
-    #     'table_name': 'mo_ked_a',
-    #     'folder': 'KineticEnergyDensity',
-    #     'spins': 'yes'
-    # },
-    # {
-    #     'Carray_property': 'mo_ked_b',
-    #     'table_name': 'mo_ked_b',
-    #     'folder': 'KineticEnergyDensity',
-    #     'spins': 'yes'
-    # },
-    # {
-    #     'Carray_property': 'ked_tot',
-    #     'table_name': 'ked_tot',
-    #     'folder': 'KineticEnergyDensity',
-    #     'spins': 'no'
-    # }
+    {
+        "Carray_property": "mo_ked_a",
+        "table_name": "mo_ked_a",
+        "folder": "KineticEnergyDensity",
+        "spins": "yes",
+    },
+    {
+        "Carray_property": "mo_ked_b",
+        "table_name": "mo_ked_b",
+        "folder": "KineticEnergyDensity",
+        "spins": "yes",
+    },
+    {
+        "Carray_property": "ked_tot",
+        "table_name": "ked_tot",
+        "folder": "KineticEnergyDensity",
+        "spins": "no",
+    },
 ]
 
 
@@ -257,9 +257,12 @@ def create_properties_arrays(hdf5_file, parent_folder, table_name, description, 
         description (str): Description of the table.
         data (numpy.ndarray): The array data to store in the table.
     """
+    filters = pt.Filters(complevel=5, complib="blosc2")
 
     # Create the table and populate the data
-    table = hdf5_file.create_table(parent_folder, table_name, ArrayPropertyDescription, description)
+    table = hdf5_file.create_table(
+        parent_folder, table_name, ArrayPropertyDescription, description, filters=filters
+    )
     row = table.row
     padded_data = np.pad(data, (0, max_norba - len(data)), "constant", constant_values=0)
     row["value"] = padded_data
@@ -278,9 +281,12 @@ def create_spins_array(h5file, parent_folder, key, array_data, shape):
         shape (int): The total size of the CArray.
     """
     data_length = len(array_data)
+    filters = pt.Filters(complevel=5, complib="blosc2")
 
     # Create the CArray and populate the data
-    array = h5file.create_carray(parent_folder, key, pt.Float64Atom(), shape=(shape,))
+    array = h5file.create_carray(
+        parent_folder, key, pt.Float64Atom(), shape=(shape,), filters=filters
+    )
     array[:data_length] = array_data
     array[data_length:] = 0
 
@@ -294,24 +300,29 @@ def create_tot_array(h5file, parent_folder, key, array_data):
         key (str): Name of the CArray.
         array_data (numpy.ndarray): The array data to store in the CArray.
     """
+    data_length = len(array_data)
+    filters = pt.Filters(complevel=5, complib="blosc2")
 
     # Create the CArray and populate the data
     tot_gradient_array = h5file.create_carray(
-        parent_folder, key, pt.Float64Atom(), shape=(NPOINTS,)
+        parent_folder, key, pt.Float64Atom(), shape=(NPOINTS,), filters=filters
     )
-    tot_gradient_array[:] = array_data
+    if data_length < NPOINTS:
+        tot_gradient_array[:data_length] = array_data
+        tot_gradient_array[data_length:] = 0
+
+    else:
+        tot_gradient_array[:] = array_data
 
 
-def create_hdf5_file(DATASETS_H5FILE, fields, dataset):
+def create_hdf5_file(DATASETS_H5FILE, fields, dataset, mult):
     """Creates an HDF5 folder with structured data for a specific dataset and element.
 
     Args:
+        DATASETS_H5FILE (tables.File): An open PyTables HDF5 file object to store the data.
         fields (dataclass): A dataclass containing the fields to store in the HDF5 file.
         dataset (str): Name of the dataset.
-        elem (str): Element symbol.
-        charge (int): Charge of the system.
-        mult (int): Multiplicity of the system.
-        nexc (int): Number of excitations.
+        mult (int): Multiplicity.
     """
     fields = asdict(fields)
     dataset = dataset.lower()
@@ -320,7 +331,6 @@ def create_hdf5_file(DATASETS_H5FILE, fields, dataset):
     elem = fields["elem"]
     nexc = fields["nexc"]
     atnum = element_symbol_map[elem][ElementAttr.atnum]
-    mult = get_scalar_data("mult", atnum, fields["nelec"])
     charge = atnum - fields["nelec"]
 
     # charge and mult can be calculated (instead of passing them)?
