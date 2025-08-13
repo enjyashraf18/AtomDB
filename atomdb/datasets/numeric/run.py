@@ -29,7 +29,6 @@ import os
 import numpy as np
 import atomdb
 from atomdb.utils import MULTIPLICITIES, DEFAULT_DATAPATH
-from atomdb.periodic import Element
 from dataclasses import dataclass
 from typing import Optional, Dict
 from atomdb.periodic_test import element_symbol_map, get_scalar_data
