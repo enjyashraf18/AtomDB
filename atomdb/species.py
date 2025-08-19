@@ -36,7 +36,6 @@ from numbers import Integral
 datasets_hdf5_file = files("atomdb.datasets").joinpath("datasets_data.h5")
 DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
 
-
 __all__ = [
     "Species",
     "compile_species",
