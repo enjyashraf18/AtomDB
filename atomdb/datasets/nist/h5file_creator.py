@@ -9,7 +9,7 @@ from atomdb.periodic_test import element_symbol_map, ElementAttr
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings("ignore", category=pt.NaturalNameWarning)
 
-SLATER_PROPERTY_CONFIGS = [
+NIST_PROPERTY_CONFIGS = [
     {
         "SpeciesInfo": "elem",
         "type": "string",
@@ -195,7 +195,7 @@ def create_hdf5_file(DATASETS_H5FILE, fields, dataset, mult):
     species_info_table_row = species_info_table.row
 
     # Create basic property tables
-    for config in SLATER_PROPERTY_CONFIGS:
+    for config in NIST_PROPERTY_CONFIGS:
         if "SpeciesInfo" in config:
             prop_name = config["SpeciesInfo"]
             create_species_info_table(
