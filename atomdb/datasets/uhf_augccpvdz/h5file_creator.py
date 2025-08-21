@@ -10,7 +10,7 @@ from atomdb.periodic_test import element_symbol_map, ElementAttr
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings("ignore", category=pt.NaturalNameWarning)
 
-max_norba = 100 #needs to be calculated
+max_norba = 100  # needs to be calculated
 
 UHF_AUGCCPVDZ_PROPERTY_CONFIGS = [
     {

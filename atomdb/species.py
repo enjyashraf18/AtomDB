@@ -16,6 +16,7 @@
 r"""AtomDB, a database of atomic and ionic properties."""
 
 import json
+import os
 import re
 from dataclasses import asdict, dataclass, field
 from importlib import import_module
@@ -32,9 +33,7 @@ from atomdb.utils import DEFAULT_DATAPATH, DEFAULT_DATASET, DEFAULT_REMOTE
 from importlib_resources import files
 import tables as pt
 from numbers import Integral
-
-datasets_hdf5_file = files("atomdb.datasets").joinpath("datasets_data.h5")
-DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
+import glob
 
 __all__ = [
     "Species",
@@ -43,6 +42,42 @@ __all__ = [
     "load",
     "raw_datafile",
 ]
+
+
+def get_versioned_h5file(version=None):
+    """
+    Get the file path of the versioned HDF5 dataset file.
+
+    Parameters:
+    version : int, optional
+
+    Returns:
+    str
+        The file path to the requested or latest versioned HDF5 file.
+    """
+    datasets_dir = files("atomdb.datasets")
+    base_name = "datasets_data"
+
+    if version is not None:
+        # Get the requested HDF5 file
+        h5file_path = str(datasets_dir.joinpath(f"{base_name}-v{version:03d}.h5"))
+        if not os.path.exists(h5file_path):
+            raise FileNotFoundError(f"Requested version v{version:03d} not found")
+    else:
+        files_paths = str(datasets_dir.joinpath("datasets_data-v*.h5"))
+
+        # Find all versioned files
+        hdf5_files = glob.glob(files_paths)
+
+        # Return last version
+        hdf5_files.sort()
+        h5file_path = hdf5_files[-1]
+
+    return h5file_path
+
+
+datasets_hdf5_file = get_versioned_h5file()
+DEFAULT_DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
 
 
 def default_required(name, typeof):
@@ -75,7 +110,7 @@ def scalar(method):
         if name not in PROPERTY_NAME_MAP:
             return getattr(self._data, name)
 
-        get_scalar_data(name, self._data.atnum, self._data.nelec)
+        return get_scalar_data(name, self._data.atnum, self._data.nelec)
 
     wrapper.__doc__ = method.__doc__
     return wrapper
@@ -706,6 +741,7 @@ def compile_species(
     charge,
     mult,
     nexc=0,
+    version=None,
     dataset=DEFAULT_DATASET,
     datapath=DEFAULT_DATAPATH,
 ):
@@ -727,15 +763,27 @@ def compile_species(
         Path to the local AtomDB cache, by default DEFAULT_DATAPATH variable value.
 
     """
+
+    if version is not None:
+        datasets_hdf5_file = get_versioned_h5file(version)
+        DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
+
+    else:
+        DATASETS_H5FILE = DEFAULT_DATASETS_H5FILE
+
     # import the selected dataset compile script and get fields
     submodule = import_module(f"atomdb.datasets.{dataset}.run")
     fields = submodule.run(elem, charge, mult, nexc, dataset, datapath)
 
     # dump the data to the HDF5 file
-    dump(fields, dataset, mult)
+    dump(DATASETS_H5FILE, fields, dataset, mult)
+
+    if DATASETS_H5FILE != DEFAULT_DATASETS_H5FILE:
+        DATASETS_H5FILE.close()
+    DATASETS_H5FILE.close()
 
 
-def dump(fields, dataset, mult):
+def dump(DATASETS_H5FILE, fields, dataset, mult):
     r"""Dump the compiled species data to an HDF5 file in the AtomDB database.
 
     Parameters
@@ -756,6 +804,7 @@ def load(
     mult,
     nexc=0,
     dataset=DEFAULT_DATASET,
+    version=None,
     datapath=DEFAULT_DATAPATH,
     remotepath=DEFAULT_REMOTE,
 ):
@@ -784,6 +833,13 @@ def load(
 
     """
 
+    if version is not None:
+        datasets_hdf5_file = get_versioned_h5file(version)
+        DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
+
+    else:
+        DATASETS_H5FILE = DEFAULT_DATASETS_H5FILE
+
     # Construct the dataset path
     dataset_path = f"/Datasets/{dataset}"
 
@@ -793,20 +849,23 @@ def load(
 
     # Handle wildcard case for loading multiple species
     if Ellipsis in (elem, charge, mult, nexc):
-        data_paths = datafile(elem, charge, mult, nexc=nexc, dataset=dataset)
+        data_paths = datafile(elem, charge, mult, DATASETS_H5FILE, nexc=nexc, dataset=dataset)
         # create a list to hold all species objects
         obj = []
         for data_path in data_paths:
             elem = data_path.split("/")[-2]
             # Construct the specific data path for each species
-            fields = get_species_data(data_path, elem, DATASET_PROPERTY_CONFIGS)
+            fields = get_species_data(DATASETS_H5FILE, data_path, elem, DATASET_PROPERTY_CONFIGS)
             obj.append(Species(dataset, fields))
     else:
         # Construct the specific data path for a single species
         data_path = f"{dataset_path}/{elem}/{elem}_{charge:03d}_{mult:03d}_{nexc:03d}"
         # get the species data and then create a species object
-        fields = get_species_data(data_path, elem, DATASET_PROPERTY_CONFIGS)
+        fields = get_species_data(DATASETS_H5FILE, data_path, elem, DATASET_PROPERTY_CONFIGS)
         obj = Species(dataset, fields)
+
+    if DATASETS_H5FILE != DEFAULT_DATASETS_H5FILE:
+        DATASETS_H5FILE.close()
 
     return obj
 
@@ -815,6 +874,7 @@ def datafile(
     elem,
     charge,
     mult,
+    DATASETS_H5FILE,
     nexc=0,
     dataset=DEFAULT_DATASET,
     datapath=DEFAULT_DATAPATH,
@@ -884,7 +944,7 @@ def datafile(
     return group_paths
 
 
-def get_species_data(folder_path, elem, DATASET_PROPERTY_CONFIGS):
+def get_species_data(DATASETS_H5FILE, folder_path, elem, DATASET_PROPERTY_CONFIGS):
     r"""Retrieve species data from the specified HDF5 folder path.
 
     Parameters

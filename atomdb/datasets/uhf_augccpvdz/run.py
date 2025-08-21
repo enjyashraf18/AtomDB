@@ -66,6 +66,7 @@ Electronic structure and density properties evaluated with aug-cc-pVDZ basis set
 
 """
 
+
 @dataclass
 class DefinitionClass:
     """Data structure for the Slater dataset."""
@@ -239,14 +240,15 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     atmass = get_scalar_data("atmass", atnum, nelec)
 
     # get scalar data
-    cov_radius, vdw_radius, at_radius, polarizability, dispersion = [None,] * 5
+    cov_radius, vdw_radius, at_radius, polarizability, dispersion = [
+        None,
+    ] * 5
     if charge == 0:
         cov_radius = get_scalar_data("cov_radius", atnum, nelec)
         vdw_radius = get_scalar_data("vdw_radius", atnum, nelec)
         at_radius = get_scalar_data("at_radius", atnum, nelec)
         polarizability = get_scalar_data("polarizability", atnum, nelec)
         dispersion = get_scalar_data("dispersion", atnum, nelec)
-
 
     #
     # Conceptual-DFT properties (TODO)
