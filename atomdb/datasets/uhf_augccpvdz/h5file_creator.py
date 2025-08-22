@@ -3,7 +3,7 @@ import numpy as np
 from importlib_resources import files
 import tables as pt
 from dataclasses import asdict
-from atomdb.datasets.uhf_augccpvdz.run import NPOINTS
+# from atomdb.datasets.uhf_augccpvdz.run import NPOINTS
 from atomdb.periodic_test import element_symbol_map, ElementAttr
 
 
@@ -11,6 +11,7 @@ from atomdb.periodic_test import element_symbol_map, ElementAttr
 warnings.filterwarnings("ignore", category=pt.NaturalNameWarning)
 
 max_norba = 100  # needs to be calculated
+NPOINTS = 1000
 
 UHF_AUGCCPVDZ_PROPERTY_CONFIGS = [
     {

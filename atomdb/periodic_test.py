@@ -9,6 +9,7 @@ __all__ = [
     "PROPERTY_NAME_MAP",
     "get_scalar_data",
     "element_symbol_map",
+    "atnum_to_symbol",
     "ElementAttr",
 ]
 
@@ -106,3 +107,5 @@ def map_element_symbol():
 
 
 element_symbol_map = map_element_symbol()
+atnum_to_symbol = {atnum[0]: elem for elem, atnum in element_symbol_map.items()}
+print(atnum_to_symbol)
