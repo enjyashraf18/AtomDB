@@ -78,6 +78,7 @@ def get_versioned_h5file(version=None):
         hdf5_files.sort()
         h5file_path = hdf5_files[-1]
 
+    print(f"opened {h5file_path}")
     return h5file_path
 
 
@@ -249,10 +250,10 @@ class _AtomicOrbitals:
     """Atomic orbitals class."""
 
     def __init__(self, data) -> None:
-        self.occs_a = data.mo_occs_a
-        self.occs_b = data.mo_occs_b
-        self.energy_a = data.mo_energy_a
-        self.energy_b = data.mo_energy_b
+        self.occs_a = getattr(data, "mo_occs_a", None)
+        self.occs_b = getattr(data, "mo_occs_b", None)
+        self.energy_a = getattr(data, "mo_energy_a", None)
+        self.energy_b = getattr(data, "mo_energy_b", None)
         self.norba = len(self.energy_a) if self.energy_a is not None else None
         self.norbb = len(self.energy_b) if self.energy_a is not None else None
         self.nbasis = self.norba  # number of spatial basis functions

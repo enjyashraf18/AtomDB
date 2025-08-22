@@ -3,7 +3,7 @@ import numpy as np
 from importlib_resources import files
 import tables as pt
 from dataclasses import asdict
-# from atomdb.datasets.slater.run import NPOINTS
+from atomdb.datasets.slater.run import NPOINTS
 from atomdb.periodic_test import element_symbol_map, ElementAttr
 
 
@@ -11,7 +11,6 @@ from atomdb.periodic_test import element_symbol_map, ElementAttr
 warnings.filterwarnings("ignore", category=pt.NaturalNameWarning)
 
 max_norba = 56
-NPOINTS = 1000
 
 SLATER_PROPERTY_CONFIGS = [
     {
