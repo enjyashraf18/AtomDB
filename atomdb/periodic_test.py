@@ -108,4 +108,3 @@ def map_element_symbol():
 
 element_symbol_map = map_element_symbol()
 atnum_to_symbol = {atnum[0]: elem for elem, atnum in element_symbol_map.items()}
-print(atnum_to_symbol)
