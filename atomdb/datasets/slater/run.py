@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from typing import Optional, Dict
 from atomdb.periodic_test import element_symbol_map, get_scalar_data
 
-__all__ = ["AtomicDensity", "load_slater_wfn", "run"]
+__all__ = ["AtomicDensity", "load_slater_wfn", "run", "NPOINTS"]
 
 
 BOUND = (1e-5, 15.0)

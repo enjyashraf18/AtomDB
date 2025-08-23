@@ -37,7 +37,6 @@ __all__ = [
 ]
 
 
-
 DEFAULT_DATASET = "slater"
 r"""Default dataset to query."""
 

@@ -42,6 +42,7 @@ from atomdb.datasets.tools import (
 
 __all__ = [
     "run",
+    "NPOINTS",
 ]
 
 

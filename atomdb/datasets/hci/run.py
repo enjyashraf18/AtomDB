@@ -49,6 +49,7 @@ from atomdb.periodic_test import element_symbol_map, get_scalar_data
 
 __all__ = [
     "run",
+    "NPOINTS",
 ]
 
 
