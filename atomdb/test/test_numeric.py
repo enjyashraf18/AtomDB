@@ -45,7 +45,7 @@ def test_numerical_hf_data_h():
     sp = load("H", 0, 2, dataset="numeric", datapath=TEST_DATAPATH)
 
     # check shape radial grid and total density arrays
-    assert sp._data.rs.shape == (122,)
+    assert sp._data.rs.shape == (1000,)
     assert sp._data.dens_tot.shape == sp._data.rs.shape
 
     # check radial grid and total density arrays values
@@ -81,7 +81,7 @@ def test_numerical_hf_data_h_anion():
     assert_almost_equal(sp.energy, -0.487929734301232, decimal=10)
 
     # check shape radial grid and total density arrays
-    assert sp._data.rs.shape == (139,)
+    assert sp._data.rs.shape == (1000,)
     assert sp._data.dens_tot.shape == sp._data.rs.shape
 
     # reference radial values sample and corresponding indices
@@ -135,7 +135,7 @@ def test_numerical_hf_energy_especies(atom, mult, energy):
 
 
 @pytest.mark.parametrize(
-    "atom, mult, npoints, nelec", [("Be", 1, 146, 4.0), ("Cl", 2, 164, 17.0), ("Ne", 1, 151, 10.0)]
+    "atom, mult, npoints, nelec", [("Be", 1, 1000, 4.0), ("Cl", 2, 1000, 17.0), ("Ne", 1, 1000, 10.0)]
 )
 def test_numerical_hf_atomic_density(atom, mult, npoints, nelec):
     # load atomic and density data
