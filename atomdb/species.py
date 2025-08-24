@@ -184,6 +184,7 @@ class DensitySpline:
     def __init__(self, x, y, log=False):
         r"""Initialize the CubicSpline instance."""
         self._log = log
+        x, y = self._trim_padded_data(x, y)
         self._obj = CubicSpline(
             x,
             # Clip y values to >= ε^2 if using log because they have to be above 0;
@@ -193,6 +194,13 @@ class DensitySpline:
             bc_type="not-a-knot",
             extrapolate=True,
         )
+
+    def _trim_padded_data(self, data_x, data_y, tol=1e-10):
+        """Trim padded zeros from the end of arrays."""
+        trimmed_x = trim_padded_array(data_x, tol)
+        effective_length = len(trimmed_x)
+        trimmed_y = data_y[:effective_length]
+        return trimmed_x, trimmed_y
 
     def __call__(self, x, deriv=0):
         r"""
@@ -1007,7 +1015,31 @@ def get_species_data(DATASETS_H5FILE, folder_path, elem, DATASET_PROPERTY_CONFIG
     for prop in ("atmass", "cov_radius", "vdw_radius", "at_radius", "polarizability", "dispersion"):
         fields[prop] = get_scalar_data(prop, fields["atnum"], fields["nelec"])
 
+    if "rs" in fields:
+        rs_trimmed_array = trim_padded_array(fields["rs"])
+        effective_length = len(rs_trimmed_array)
+        for config in DATASET_PROPERTY_CONFIGS:
+            if "Carray_property" in config:
+                # Trim only if spins == "no" or spins is not specified
+                if config.get("spins") == "no" or ("spins" not in config):
+                    fields[config["Carray_property"]] = fields[config["Carray_property"]][
+                        :effective_length
+                    ]
     return fields
+
+
+def trim_padded_array(data, tol=1e-10):
+    """Trim padded zeros from the end of arrays."""
+    # Find non-zero elements
+    non_zero_mask = np.abs(data) > tol
+    non_zero_indices = np.where(non_zero_mask)[0]
+
+    if len(non_zero_indices) == 0:
+        return data[:0]
+
+    # Get the last non-zero index
+    last_non_zero_index = non_zero_indices[-1]
+    return data[: (last_non_zero_index + 1)]
 
 
 def raw_datafile(
