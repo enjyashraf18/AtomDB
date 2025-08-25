@@ -996,8 +996,8 @@ def get_species_data(DATASETS_H5FILE, folder_path, elem, DATASET_PROPERTY_CONFIG
         elif "array_property" in config:
             # Extract array properties
             table = dataset_folder.Properties._f_get_child(config["table_name"])
-            arr_data = trim_padded_array(table[0]["value"])
-            fields[config["array_property"]] = arr_data
+            arr_data = table[0]["value"]
+            fields[config["array_property"]] = arr_data[:fields["nbasis"]]
 
         elif "Carray_property" in config:
             # Extract Carray properties
