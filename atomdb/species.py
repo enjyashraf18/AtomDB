@@ -73,7 +73,6 @@ def get_versioned_h5file(version=None):
         hdf5_files.sort()
         h5file_path = hdf5_files[-1]
 
-    print(f"opened {h5file_path}")
     return h5file_path
 
 
@@ -997,7 +996,8 @@ def get_species_data(DATASETS_H5FILE, folder_path, elem, DATASET_PROPERTY_CONFIG
         elif "array_property" in config:
             # Extract array properties
             table = dataset_folder.Properties._f_get_child(config["table_name"])
-            fields[config["array_property"]] = table[0]["value"]
+            arr_data = trim_padded_array(table[0]["value"])
+            fields[config["array_property"]] = arr_data
 
         elif "Carray_property" in config:
             # Extract Carray properties
@@ -1011,15 +1011,18 @@ def get_species_data(DATASETS_H5FILE, folder_path, elem, DATASET_PROPERTY_CONFIG
         fields[prop] = get_scalar_data(prop, fields["atnum"], fields["nelec"])
 
     if "rs" in fields:
-        rs_trimmed_array = trim_padded_array(fields["rs"])
-        effective_length = len(rs_trimmed_array)
+        rs_trimmed = trim_padded_array(fields["rs"])
+        effective_length = len(rs_trimmed)
+        fields["rs"] = rs_trimmed
         for config in DATASET_PROPERTY_CONFIGS:
             if "Carray_property" in config:
-                # Trim only if spins == "no" or spins is not specified
-                if config.get("spins") == "no" or ("spins" not in config):
-                    fields[config["Carray_property"]] = fields[config["Carray_property"]][
-                        :effective_length
-                    ]
+                prop = config["Carray_property"]
+                if prop.endswith("_tot") or config.get("spins") == "no" or "spins" not in config:
+                    fields[prop] = fields[prop][:effective_length]
+                elif prop.endswith("_a"):
+                    fields[prop] = fields[prop][: fields["nbasis"] * effective_length]
+                elif prop.endswith("_b"):
+                    fields[prop] = fields[prop][: fields["nbasis"] * effective_length]
     return fields
 
 
