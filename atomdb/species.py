@@ -117,6 +117,42 @@ def default_matrix():
 #     return wrapper
 
 
+# def scalar(method):
+#     r"""Expose a SpeciesData field."""
+#     name = method.__name__
+#
+#     @property
+#     def wrapper(self):
+#         print("hi")
+#
+#         # Map the name of the method in the SpeciesData class to the name in the Elements class
+#         # This dict can be removed if the Elements csv file uses the same names as the SpeciesData class.
+#         namemap = {
+#             "cov_radius": "cov_radius",
+#             "vdw_radius": "vdw_radius",
+#             "at_radius": "at_radius",
+#             "polarizability": "pold",
+#             "dispersion_c6": "c6",
+#             "atmass": "mass",
+#         }
+#
+#         if name == "atmass":
+#             print(f"inside atmass {getattr(Element(self._data.elem), namemap[name])}")
+#             return getattr(Element(self._data.elem), namemap[name])
+#         if name in namemap:
+#             # Only return Element property if neutral, otherwise None
+#             charge = self._data.atnum - self._data.nelec
+#             print(f"charge {charge}")
+#             print(f"inside the other {getattr(Element(self._data.elem), namemap[name])}")
+#             return getattr(Element(self._data.elem), namemap[name]) if charge == 0 else None
+#
+#         return getattr(self._data, name)
+#
+#     # conserve the docstring of the method
+#     wrapper.__doc__ = method.__doc__
+#     return wrapper
+
+
 def scalar(method):
     r"""Expose a SpeciesData field."""
     name = method.__name__
