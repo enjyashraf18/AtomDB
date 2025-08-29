@@ -22,6 +22,7 @@ import atexit
 import glob
 from dataclasses import asdict, dataclass, field
 from importlib import import_module
+from numbers import Integral
 from os import makedirs, path
 
 import numpy as np
@@ -34,7 +35,6 @@ from atomdb.periodic_test import element_symbol_map, PROPERTY_NAME_MAP, get_scal
 from atomdb.utils import DEFAULT_DATAPATH, DEFAULT_DATASET, DEFAULT_REMOTE
 from importlib_resources import files
 import tables as pt
-from numbers import Integral
 
 datasets_hdf5_file = files("atomdb.datasets").joinpath("datasets_data.h5")
 DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
@@ -46,6 +46,7 @@ __all__ = [
     "dump",
     "load",
     "raw_datafile",
+    "get_versioned_h5file",
 ]
 
 
@@ -83,7 +84,7 @@ def get_versioned_h5file(version=None):
 
 datasets_hdf5_file = get_versioned_h5file()
 DEFAULT_DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
-
+atexit.register(DEFAULT_DATASETS_H5FILE.close)
 
 def default_required(name, typeof):
     r"""Default factory for required fields."""

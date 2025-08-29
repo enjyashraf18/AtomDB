@@ -7,7 +7,7 @@ import atexit
 import tables as pt
 import numpy as np
 from importlib_resources import files
-
+import atexit
 
 __all__ = [
     "PROPERTY_NAME_MAP",
