@@ -34,6 +34,7 @@ from importlib_resources import files
 import tables as pt
 from numbers import Integral
 import glob
+import atexit
 
 __all__ = [
     "Species",
@@ -41,6 +42,7 @@ __all__ = [
     "dump",
     "load",
     "raw_datafile",
+    "get_versioned_h5file",
 ]
 
 
@@ -78,7 +80,7 @@ def get_versioned_h5file(version=None):
 
 datasets_hdf5_file = get_versioned_h5file()
 DEFAULT_DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
-
+atexit.register(DEFAULT_DATASETS_H5FILE.close)
 
 def default_required(name, typeof):
     r"""Default factory for required fields."""
