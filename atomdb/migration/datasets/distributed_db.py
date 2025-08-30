@@ -1,5 +1,6 @@
 from importlib_resources import files
 from atomdb.species import get_versioned_h5file
+from atomdb.db import DATASETS_NAMES
 import tables as pt
 import warnings
 import atexit
@@ -11,16 +12,8 @@ datasets_hdf5_file = get_versioned_h5file()
 DATASETS_H5FILE = pt.open_file(datasets_hdf5_file, mode="a")
 atexit.register(DATASETS_H5FILE.close)
 
-datasets_names = {
-    "slater",
-    "gaussian",
-    "hci",
-    "nist",
-    "numeric",
-    "uhf_augccpvdz",
-}
 
-for dataset_name in datasets_names:
+for dataset_name in DATASETS_NAMES:
     dataset_path = f"/Datasets/{dataset_name}"
     dataset_file = files("atomdb.datasets.datasets_files").joinpath(f"{dataset_name}_v000.h5")
 

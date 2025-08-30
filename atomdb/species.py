@@ -42,7 +42,6 @@ __all__ = [
     "dump",
     "load",
     "raw_datafile",
-    "get_versioned_h5file",
 ]
 
 
