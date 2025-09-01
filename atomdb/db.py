@@ -11,6 +11,7 @@ import warnings
 __all__ = [
     "DATASETS_NAMES",
     "create_global_db",
+    "GlobalDB",
 ]
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings("ignore", category=pt.NaturalNameWarning)
@@ -65,7 +66,7 @@ class GlobalDB:
 
         if not os.path.exists(dataset_file):
             raise FileNotFoundError(f"Dataset file {dataset_file} not found")
-        self.h5file.create_external_link("/", dataset, f"{dataset_file}:/Datasets/{dataset}")
+        self.h5file.create_external_link("/", dataset, f"{dataset_file}:/")
 
     def _get_last_h5file_version(self, dataset, version):
         """Find the appropriate dataset file for the requested version.
@@ -93,10 +94,6 @@ class GlobalDB:
             # Find all versioned files
             hdf5_files = glob.glob(dataset_files_paths)
 
-            # check for empty list
-            if not hdf5_files:
-                raise FileNotFoundError(f"No versions found for {dataset}")
-
             # Return last version
             hdf5_files.sort()
             dataset_file = hdf5_files[-1]
@@ -104,7 +101,7 @@ class GlobalDB:
         return dataset_file
 
 
-def create_global_db():
+def create_global_db(version=None):
     """Create and initialize a global database with all datasets.
 
     Returns
@@ -116,7 +113,7 @@ def create_global_db():
 
     for dataset in DATASETS_NAMES:
         try:
-            global_db.attach_dataset(dataset)
+            global_db.attach_dataset(dataset, version)
         except (FileNotFoundError, ValueError) as e:
             print(f"Error: could not attach {dataset} dataset: {e}")
 
