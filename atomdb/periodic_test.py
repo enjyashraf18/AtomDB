@@ -1,5 +1,6 @@
 from enum import IntEnum
 from numbers import Integral
+import atexit
 import tables as pt
 import numpy as np
 from importlib_resources import files
@@ -20,6 +21,7 @@ class ElementAttr(IntEnum):
 
 elements_hdf5_file = files("atomdb.data").joinpath("elements_data.h5")
 ELEMENTS_H5FILE = pt.open_file(elements_hdf5_file, mode="r")
+atexit.register(ELEMENTS_H5FILE.close)
 
 PROPERTY_NAME_MAP = {
     "atmass": "atmass",
