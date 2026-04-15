@@ -257,11 +257,7 @@ def create_properties_arrays(hdf5_file, parent_folder, table_name, description, 
         description (str): Description of the table.
         data (numpy.ndarray): The array data to store in the table.
     """
-<<<<<<< HEAD
-    filters = pt.Filters(complevel=5, complib="blosc2")
-=======
     filters = pt.Filters(complevel=5, complib="blosc2:lz4")
->>>>>>> da48e1b (Convert numeric dataset files from msgpack to HDF5)
 
     # Create the table and populate the data
     table = hdf5_file.create_table(
@@ -285,11 +281,7 @@ def create_spins_array(h5file, parent_folder, key, array_data, shape):
         shape (int): The total size of the CArray.
     """
     data_length = len(array_data)
-<<<<<<< HEAD
-    filters = pt.Filters(complevel=5, complib="blosc2")
-=======
     filters = pt.Filters(complevel=5, complib="blosc2:lz4")
->>>>>>> da48e1b (Convert numeric dataset files from msgpack to HDF5)
 
     # Create the CArray and populate the data
     array = h5file.create_carray(
@@ -309,11 +301,7 @@ def create_tot_array(h5file, parent_folder, key, array_data):
         array_data (numpy.ndarray): The array data to store in the CArray.
     """
     data_length = len(array_data)
-<<<<<<< HEAD
-    filters = pt.Filters(complevel=5, complib="blosc2")
-=======
     filters = pt.Filters(complevel=5, complib="blosc2:lz4")
->>>>>>> da48e1b (Convert numeric dataset files from msgpack to HDF5)
 
     # Create the CArray and populate the data
     tot_gradient_array = h5file.create_carray(
