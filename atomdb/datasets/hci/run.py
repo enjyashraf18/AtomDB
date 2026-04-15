@@ -46,7 +46,6 @@ from dataclasses import dataclass
 from typing import Optional, Dict
 from atomdb.periodic_test import element_symbol_map, get_scalar_data
 
-
 __all__ = [
     "run",
     "NPOINTS",
@@ -125,6 +124,7 @@ class DefinitionClass:
     mo_ked_a: np.ndarray = Optional[np.ndarray]
     mo_ked_b: np.ndarray = Optional[np.ndarray]
     ked_tot: np.ndarray = Optional[np.ndarray]
+
 
 def raw_filepath(suffix, n_atom, charge, mult, nexc, basis, dataset, data_path):
     G1G2 = [1, 2, 3, 4, 11, 12]  # Group 1 and 2 elements
@@ -259,7 +259,9 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     atmass = get_scalar_data("atmass", atnum, nelec)
 
     # get scalar data
-    cov_radius, vdw_radius, at_radius, polarizability, dispersion = [None,] * 5
+    cov_radius, vdw_radius, at_radius, polarizability, dispersion = [
+        None,
+    ] * 5
     if charge == 0:
         cov_radius = get_scalar_data("cov_radius", atnum, nelec)
         vdw_radius = get_scalar_data("vdw_radius", atnum, nelec)

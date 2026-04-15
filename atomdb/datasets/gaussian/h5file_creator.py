@@ -6,7 +6,6 @@ from dataclasses import asdict
 from atomdb.datasets.gaussian.run import NPOINTS
 from atomdb.periodic_test import element_symbol_map, ElementAttr
 
-
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings("ignore", category=pt.NaturalNameWarning)
 

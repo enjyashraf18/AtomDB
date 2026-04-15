@@ -24,7 +24,6 @@
 #
 """Numerical Hartree-Fock Data on a Grid."""
 
-
 import os
 import numpy as np
 import atomdb

@@ -3,9 +3,9 @@ import numpy as np
 from importlib_resources import files
 import tables as pt
 from dataclasses import asdict
+
 # from atomdb.datasets.uhf_augccpvdz.run import NPOINTS
 from atomdb.periodic_test import element_symbol_map, ElementAttr
-
 
 # Suppresses NaturalNameWarning warnings from PyTables.
 warnings.filterwarnings("ignore", category=pt.NaturalNameWarning)

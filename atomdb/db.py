@@ -7,7 +7,6 @@ import atexit
 from importlib_resources import files
 import warnings
 
-
 __all__ = [
     "DATASETS_NAMES",
     "create_global_db",

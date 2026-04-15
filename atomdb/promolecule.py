@@ -583,7 +583,10 @@ def make_promolecule(
     if isinstance(atnums, (Integral, str)):
         atnums = [atnums]
     # Get atomic symbols/numbers from inputs
-    atnums = [element_symbol_map[atom][ElementAttr.atnum] if isinstance(atom, str) else atom for atom in atnums]
+    atnums = [
+        element_symbol_map[atom][ElementAttr.atnum] if isinstance(atom, str) else atom
+        for atom in atnums
+    ]
     atoms = [atnum_to_symbol[atom] if isinstance(atom, Integral) else atom for atom in atnums]
 
     # Handle default charge parameters
@@ -808,10 +811,9 @@ def _intensive_property_exclude_zero(atoms, coeffs, f, p=1):
         Intensive property.
     """
     # P-mean of each atom's property value
-    return (
-            sum(coeff * f(atom) ** p for atom, coeff in zip(atoms, coeffs) if atom.nelec != 0)
-                / sum(coeff for atom, coeff in zip(atoms, coeffs) if atom.nelec != 0) ** (1 / p)
-    )
+    return sum(coeff * f(atom) ** p for atom, coeff in zip(atoms, coeffs) if atom.nelec != 0) / sum(
+        coeff for atom, coeff in zip(atoms, coeffs) if atom.nelec != 0
+    ) ** (1 / p)
 
 
 def _radial_vector_outer_triu(radii):

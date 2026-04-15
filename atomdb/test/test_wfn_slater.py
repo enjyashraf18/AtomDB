@@ -35,7 +35,6 @@ from numpy.testing import assert_almost_equal
 
 from atomdb import load
 
-
 # get test data path
 TEST_DATAPATH = files("atomdb.test.data")
 TEST_DATAPATH = os.fspath(TEST_DATAPATH._paths[0])

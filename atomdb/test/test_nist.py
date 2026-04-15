@@ -159,7 +159,7 @@ def test_nist_data(case):
 
     for attr, value in case.items():
         data_value = getattr(sp, attr)
-        
+
         # treat None and nan as equivalent
         if value is None and isinstance(data_value, (int, float)) and np.isnan(data_value):
             continue

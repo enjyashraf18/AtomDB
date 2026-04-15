@@ -39,7 +39,6 @@ from atomdb.periodic_test import element_symbol_map, get_scalar_data
 
 import atomdb
 
-
 __all__ = [
     "run",
 ]

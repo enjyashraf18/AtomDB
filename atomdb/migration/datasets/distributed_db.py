@@ -17,12 +17,6 @@ for dataset_name in DATASETS_NAMES:
     dataset_path = f"/Datasets/{dataset_name}"
     dataset_file = files("atomdb.datasets.datasets_files").joinpath(f"{dataset_name}_v000.h5")
 
-
     with pt.open_file(dataset_file, "w") as h5file:
         DATASETS_H5FILE.copy_node(dataset_path, h5file.root, recursive=True)
         print(f"Created {dataset_file}")
-
-
-
-
-

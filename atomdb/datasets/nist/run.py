@@ -47,6 +47,7 @@ For each element/charge pair the values correspond to the most stable electronic
 
 """
 
+
 @dataclass
 class DefinitionClass:
     """Data structure for the Slater dataset."""

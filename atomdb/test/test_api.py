@@ -34,7 +34,6 @@ from scipy.interpolate import CubicSpline
 
 from atomdb import load
 
-
 # get test data path
 TEST_DATAPATH = files("atomdb.test.data")
 TEST_DATAPATH = os.fspath(TEST_DATAPATH._paths[0])
