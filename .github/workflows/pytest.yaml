@@ -33,13 +33,7 @@ jobs:
 
       - name: Install development version
         run: |
-          pip install -e .
-
-      - name: Install extra test dependencies
-        run: |
-          pip install --upgrade pip
-          pip install .[test_extra]
-
+          pip install -e '.[dev,test_extra]'
 
       - name: Run pytest default tests
         uses: pavelzw/pytest-action@v2
@@ -50,10 +44,6 @@ jobs:
           click-to-expand: true
           report-title: 'Test Report'
 
-      - name: Install Dev Dependencies
-        run: |
-          pip install .[dev]
-
       - name: Run pytest Dev Tests
         uses: pavelzw/pytest-action@v2
         with:
@@ -63,4 +53,3 @@ jobs:
           click-to-expand: true
           report-title: 'Dev Test Report'
           pytest-args: '-m dev'
-
