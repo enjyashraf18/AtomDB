@@ -41,8 +41,8 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "numpy>=1.26.4",
-    "scipy>=1.4",
+    "numpy>=1.26.4,<2",
+    "scipy>=1.4,<1.17",
     "msgpack>=1.0.0",
     "msgpack-numpy>=0.4.8",
     "h5py>=3.6.0",
