@@ -94,9 +94,9 @@ class DefinitionClass:
     dd_dens_tot: np.ndarray = Optional[np.ndarray]
 
     # KED
-    mo_ked_a: np.ndarray = Optional[np.ndarray]
-    mo_ked_b: np.ndarray = Optional[np.ndarray]
-    ked_tot: np.ndarray = Optional[np.ndarray]
+    # mo_ked_a: np.ndarray = Optional[np.ndarray]
+    # mo_ked_b: np.ndarray = Optional[np.ndarray]
+    # ked_tot: np.ndarray = Optional[np.ndarray]
 
 
 class AtomicDensity:
@@ -1179,9 +1179,9 @@ def run(elem, charge, mult, nexc, dataset, datapath):
     orb_dd_dens_dn = species.eval_orbs_radial_dd_density(rs)[norba:, :]
 
     # total, spin-up orbital, and spin-down orbital kinetic energy densities
-    ked_tot = species.eval_ked_positive_definite(rs)
-    mo_ked_a = species.eval_orbs_ked_positive_definite(rs)[:norba, :]
-    mo_ked_b = species.eval_orbs_ked_positive_definite(rs)[:norba, :]
+    # ked_tot = species.eval_ked_positive_definite(rs)
+    # mo_ked_a = species.eval_orbs_ked_positive_definite(rs)[:norba, :]
+    # mo_ked_b = species.eval_orbs_ked_positive_definite(rs)[:norba, :]
 
     # Get periodic data
     cov_radius = get_scalar_data("cov_radius", atnum, nelec)
@@ -1236,8 +1236,8 @@ def run(elem, charge, mult, nexc, dataset, datapath):
         mo_dd_dens_b=orb_dd_dens_dn.flatten(),
         dd_dens_tot=dd_dens_tot,
         # KED
-        mo_ked_a=mo_ked_a.flatten(),
-        mo_ked_b=mo_ked_b.flatten(),
-        ked_tot=ked_tot,
+        # mo_ked_a=mo_ked_a.flatten(),
+        # mo_ked_b=mo_ked_b.flatten(),
+        # ked_tot=ked_tot,
     )
     return fields

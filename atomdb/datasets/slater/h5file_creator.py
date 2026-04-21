@@ -132,24 +132,24 @@ SLATER_PROPERTY_CONFIGS = [
         "folder": "DensityLaplacian",
         "spins": "no",
     },
-    {
-        "Carray_property": "mo_ked_a",
-        "table_name": "mo_ked_a",
-        "folder": "KineticEnergyDensity",
-        "spins": "yes",
-    },
-    {
-        "Carray_property": "mo_ked_b",
-        "table_name": "mo_ked_b",
-        "folder": "KineticEnergyDensity",
-        "spins": "yes",
-    },
-    {
-        "Carray_property": "ked_tot",
-        "table_name": "ked_tot",
-        "folder": "KineticEnergyDensity",
-        "spins": "no",
-    },
+    # {
+    #     "Carray_property": "mo_ked_a",
+    #     "table_name": "mo_ked_a",
+    #     "folder": "KineticEnergyDensity",
+    #     "spins": "yes",
+    # },
+    # {
+    #     "Carray_property": "mo_ked_b",
+    #     "table_name": "mo_ked_b",
+    #     "folder": "KineticEnergyDensity",
+    #     "spins": "yes",
+    # },
+    # {
+    #     "Carray_property": "ked_tot",
+    #     "table_name": "ked_tot",
+    #     "folder": "KineticEnergyDensity",
+    #     "spins": "no",
+    # },
 ]
 
 
@@ -367,9 +367,9 @@ def create_hdf5_file(DATASETS_H5FILE, fields, dataset, mult):
         "DensityLaplacian": DATASETS_H5FILE.create_group(
             specific_elem_folder, "DensityLaplacian", "Density Laplacian Data"
         ),
-        "KineticEnergyDensity": DATASETS_H5FILE.create_group(
-            specific_elem_folder, "KineticEnergyDensity", "Kinetic Energy Density Data"
-        ),
+        # "KineticEnergyDensity": DATASETS_H5FILE.create_group(
+        #     specific_elem_folder, "KineticEnergyDensity", "Kinetic Energy Density Data"
+        # ),
     }
 
     # Create basic species table and its row
